@@ -6,7 +6,7 @@ by Alexander Turner
 """
 
 
-from option import Option
+from miniquest.option import Option
 
 
 TEXT_PATH = "assets/text/"

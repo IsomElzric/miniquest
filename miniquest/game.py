@@ -6,8 +6,8 @@ by Alexander Turner
 """
 
 
-from menu import Menu
-from entity import Entity
+from miniquest.menu import Menu
+from miniquest.entity import Entity
 
 
 class Game():
@@ -20,15 +20,32 @@ class Game():
         """
         self.run = True
 
+        self.player = Entity("Amira", 1, 3, 2, 1)
+        self.enemy = Entity("Thief", 1, 2, 1, 3)
+
     def start_game(self):
         """
         Begins the game loop.
         """
-        
         self.do_output()
 
     def do_output(self):
-        pass
+        print("Player: {} Level: {} Health: {} - Attack: {} Defense: {} Speed: {}".format(
+            self.player.name, self.player.level, self.player.health, 
+            self.player.attack, self.player.defense, self.player.speed
+        ))
+
+        print("Enemy: {} Level: {} Health: {} - Attack: {} Defense: {} Speed: {}".format(
+            self.enemy.name, self.enemy.level, self.enemy.health, 
+            self.enemy.attack, self.enemy.defense, self.enemy.speed
+        ))
+
+        damage = self.player.get_damage()
+        print("{} - Damage Dealt: {}".format(self.player.name, damage))
+
+        self.enemy.wound(damage)
+        print("{} - Health: {}".format(self.enemy.name, self.enemy.health))
+
 
 
 def debug(location, message):
