@@ -1,0 +1,9 @@
+--------------------MiniQuest--------------------
+Welcome to MiniQuest, a simple text rpg. You have 
+found yourself reaching the last city on the edge 
+of civialization. Your dreams have summoned you 
+to the ruins of the once great city of Lastholm.
+
+1) Start New Game
+2) Load Game
+3) Quit Game

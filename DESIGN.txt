@@ -1,0 +1,23 @@
+MiniQuest
+A game by Alexander Turner.
+
+Four Act Journey:
+
+The first act takes place in Lastholm, the ruined city. It was destroyed by the violent eruption of the volcano that towers over it in the mountain range. The remains of the city now crawl with looters and scavengers, monsters and terrors.
+"Another dark and ashen day in Lastholm, the sun is obscured by the clouds of soot from Shadowsun Mountain. You dawn your gear and set out for gold and glory."
+
+The second act takes you through the surreal and ethereal forest that surrounds the ruins of Lastholm. The woods are home to many unusual creatures and beasts, and the plants and trees themselves even seem to hold sentience.
+"The woods seem to whisper and sigh ancient secrets with every breeze. The unnerving twilight of the forest floor seems to play tricks on your weary eyes as you set out for gold and glory."
+
+The third act brings you to the base of the Shadowsun Mountain, and the scorched and barren wasteland that it has left behind. The sun baked and dry waste is treacherous, and those that make it their home are as ruthless and unyielding as the land itself.
+"The scorched earth cracks and crumbles under your boots as you stagger through the wastelands left by Shadowsun Mountain's merciless wrath. You gasp for water and search for shade as you set out for gold and glory."
+
+The fourth and final act brings you to this still active volcano. The ancient magic that brought the volcano to life, and the denizens that call it home, still holds sway. The path is treacherous and the destination deadly, it will take all you have to defeat the mountain’s wrathful core.
+"Pits of molten rock yawn before you, emptying into chasms reaching deep into the earth. The heat is unbearable and your skin is scorched by embers that constantly rain from above, but still you set out for gold and glory."
+
+The Three Stat System:
+Attack - A bonus to hit versus armor and dodge. Also determines the threshold for a block, parry, or riposte.
+
+Defense - Determines the threshold for a graze, glancing blow, wound, or mortal wound.
+
+Speed - Determines the threshold for dodge, as well as parry and riposte. Also adds a bonus to roll mortal wounds.
