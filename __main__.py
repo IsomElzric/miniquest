@@ -11,9 +11,9 @@ TITLE = 'Miniquest'
 WIDTH = 1080
 HEIGHT = 720
 
-LOCATION_PATH = 'assets/locations/'
-ART_PATH = 'assets/art/'
-SOUND_PATH = 'assets/sound/'
+LOCATION_PATH = 'miniquest/assets/locations/'
+ART_PATH = 'miniquest/assets/art/'
+SOUND_PATH = 'moniquest/assets/sound/'
 
 
 def main():

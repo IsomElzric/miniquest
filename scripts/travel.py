@@ -2,9 +2,9 @@ from abc import ABC, abstractmethod
 import os
 
 
-LOCATION_PATH = 'assets/locations/'
-ART_PATH = 'assets/art/'
-SOUND_PATH = 'assets/sound/'
+LOCATION_PATH = 'miniquest/assets/locations/'
+ART_PATH = 'miniquest/assets/art/'
+SOUND_PATH = 'miniquest/assets/sound/'
 
 
 class Travel():
