@@ -15,7 +15,8 @@ The project files and folders are organized as follows:
 ```
 root                  (project root folder)
 +--main               (program entry point)
-    +--game           (specific classes)
+    +--assets         (art, sound, and text)
+    +--scripts        (classes and scripts)
 README.md             (general info)
 ```
 
