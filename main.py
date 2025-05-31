@@ -59,7 +59,7 @@ def main():
             travel = Travel()
             travel.build_locations()
             current_region = 'lastholm'
-            current_location = 'lastholm.txt'
+            current_location = 'Lastholm'
             
             loop = True
 

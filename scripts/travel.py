@@ -27,7 +27,7 @@ class Travel():
                 location_class.location_name = filename
                 location_class.location_description = file_description
                 file_description.clear()
-                
+
                 temp_list.append(location_class)            
 
             self.location_dictionary[loc] = temp_list
@@ -44,8 +44,17 @@ class Travel():
 class Location(ABC):
     def __init__(self) -> None:
         super().__init__()
-        self.location_name = ''
+        self._location_name = ''
         self._location_description = ''
+
+    @property
+    def location_name(self):
+        return self._location_name
+    
+    @location_name.setter
+    def location_name(self, value):
+        removed_suffix = value.removesuffix('.txt')
+        self._location_name = removed_suffix.capitalize()
 
     @property
     def location_description(self):
@@ -54,7 +63,7 @@ class Location(ABC):
     @location_description.setter
     def location_description(self, value):
         for i in value:
-            self._location_description += i + ' '
+            self._location_description += i + '\n'
 
     def get_location_name(self):
         return self.location_name
