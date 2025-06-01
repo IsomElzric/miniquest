@@ -1,3 +1,4 @@
+['Shadowed residential blocks', 'Weeping gardens', 'Temple district']
 The entrance to Lastholm's Sewers is often a collapsed grate in a shadowed alley, a gaping maw of damp earth 
 beneath a crumbling cellar, or a narrow, slick tunnel leading down from a blighted street. 
 The moment you descend, the world above ceases to exist. 

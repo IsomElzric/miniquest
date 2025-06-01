@@ -1,3 +1,4 @@
+['Crumbling gates']
 As you finally break through the oppressive, blighted wilderness, Lastholm reveals itself, 
 not with a grand vista, but as a gaping, jagged wound upon the landscape. 
 It's a city not merely ruined, but decayed, its silhouette against the bruised sky a skeletal 

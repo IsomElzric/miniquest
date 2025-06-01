@@ -1,3 +1,4 @@
+['Shadowed residential blocks', 'Shattered market quarter']
 Stepping into the Weeping Gardens feels like intruding upon a grand, silent grief.
 Once a place of serene beauty, it is now a tangled wilderness of thorny rose bushes grown wild and choked 
 by parasitic vines.

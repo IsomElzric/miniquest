@@ -2,8 +2,6 @@ import arcade
 from scripts.entity import Entity
 from scripts.combat import Combat
 from scripts.travel import Travel
-from scripts.travel import Location
-from scripts.travel import Region
 import sys
 
 
@@ -57,31 +55,12 @@ def main():
         
         elif i == '2':
             travel = Travel()
-            travel.build_locations()
-            current_region = 'lastholm'
-            current_location = 'Lastholm'
-            
+            travel.build_areas()  
             loop = True
 
             while loop:
-                l = travel.get_location(current_region, current_location)
-
-                print()
-                print(l.location_name)
-                print()
-                print(l.location_description)
-                print()
-
-                for i in range(len(travel.location_dictionary[current_region])):
-                    print('{}. {}'.format(i + 1, travel.location_dictionary[current_region][i].location_name))
-                
-                print('Type any letter to return to main menu...')
-                loc_select = input('Enter your destination: ')
-                
-                try:
-                    current_location = travel.location_dictionary[current_region][int(loc_select) - 1].location_name
-                except ValueError:
-                    loop = False
+                travel.display_current_area()
+                loop = False
 
         elif i == '3':
             print('Feature in progress...')
