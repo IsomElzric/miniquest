@@ -1,4 +1,5 @@
 ['Whispering thicket', 'Mire of silent reflections']
+['Gnarled horror', 'Lore-ghost']
 The oppressive density of the Aethelwood thins slightly, and you step into a clearing that holds an unnatural, chilling stillness. 
 Here, the trees are not merely ancient; they are turning to stone. 
 Their trunks are craggy, grey rock, and their branches, thick as your arm, are stiff and brittle, their leaves like jagged, petrified shards that crumble to dust with the slightest touch. 

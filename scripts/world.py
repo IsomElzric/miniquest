@@ -3,9 +3,11 @@ from scripts.combat import Combat
 from scripts.entity import Entity
 import sys
 import os
+import random
 
 
 LOCATION_PATH = 'assets/locations/'
+ENEMY_PATH = 'assets/enemies/'
 ART_PATH = 'miniquest/assets/art/'
 SOUND_PATH = 'miniquest/assets/sound/'
 
@@ -18,9 +20,13 @@ class World():
 
         self.build_areas()
         self.set_location('Lastholm')
+        self.camp = 'Lastholm'
 
         self.player = Entity()
         self.player.is_player = True
+        self.enemy_list = []
+
+        self.build_enemies()
 
     def set_location(self, value):
         for i, v in enumerate(self.area_list):
@@ -28,6 +34,8 @@ class World():
             if v.name == value:
                 self.current_area = v
                 # print('Found {} and set current location as {}'.format(value, self.current_area.name))
+                if self.current_area.name in ['Lastholm', 'Aethelwood', 'Scorlends', 'Shadowsun']:
+                    self.camp = self.current_area.name
                 break
             else:
                 # print('Area not found')
@@ -43,11 +51,16 @@ class World():
                         with open(filepath, "r") as file:
                             description = []
                             connections = []
+                            enemies = []
                             for i, line in enumerate(file):
                                 if i == 0:
                                     connection_line = line.strip()
                                     # print(connection_line)
                                     connections = eval(connection_line)
+                                elif i == 1:
+                                    enemy_line = line.strip()
+                                    # print(enemy_line)
+                                    enemies = eval(enemy_line)
                                 else:
                                     description.append(line.strip())
                                     # print('Reading description {}'.format(description))
@@ -64,6 +77,9 @@ class World():
                             for i in connections:
                                 location.build_connection(i)
                                 # print('Built connection to {}'.format(i))
+                            
+                            for e in enemies:
+                                location.add_enemy(e)
 
                             self.area_list.append(location)
                     except Exception as e:
@@ -78,6 +94,7 @@ class World():
         print('{}. Stay'.format(c))
         print()
         new_location = input('What is your destination? ')
+        print()
 
         try:
             index = 0
@@ -121,41 +138,43 @@ class World():
 
     def rest(self):
         self.start_day()
+        self.player.reset_health()
+        self.set_location(self.camp)
+        self.display_current_area()
 
     def display_location_options(self):
         print('1. Fight')
         print('2. Travel')
-        print('3. Leave')
+        print('3. Rest')
         print()
         choice = input('What will you do? ')
         print()
 
         if int(choice) == 1:
-            self.fight(self.current_area)
-            self.increment_time(1)
+            if not self.current_area.enemies:
+                print('There are no enemies here...')
+            else:
+                self.fight()
+                self.increment_time(1)
             self.display_current_area()
 
         elif int(choice) == 2:
             self.move_area()
 
-        elif int(choice) == 3:
+        elif int(choice) == 3:    
+            self.rest()
+        else:
             sys.exit()
-        sys.exit()
 
-    def fight(self, location):
+    def fight(self):
         fight = Combat()
         player = self.player
+        player.print_entity()
 
-        monster = Entity()
-        monster.name = 'Monster'
-        monster.attack = 2
-        monster.defense = 1
-        monster.speed = 3
-        monster.reset_health()
-        monster.print_entity()
+        enemy = self.generate_enemy()
 
         fight.add_combatant(player)
-        fight.add_combatant(monster)
+        fight.add_combatant(enemy)
         fight.print_combatants()
         fight.start_combat()
 
@@ -190,6 +209,73 @@ class World():
         
         self.player.reset_health()
         self.player.print_entity()
+
+    def build_enemies(self):
+        for dirpath, _, filenames in os.walk(ENEMY_PATH):
+            for filename in filenames:
+                # print('Attempting to walk through {}'.format(filename))
+                if filename.endswith(".txt"):
+                    filepath = os.path.join(dirpath, filename)
+                    try:
+                        with open(filepath, "r") as file:
+                            name = filename
+                            attack = 1
+                            defense = 1
+                            speed = 1
+                            level = 1
+                            for i, line in enumerate(file):
+                                if i == 0:
+                                    attack_line = line.strip()
+                                    # print('Setting {} Attack {}'.format(name, attack_line))
+                                    attack = int(attack_line)
+                                elif i == 1:
+                                    defense_line = line.strip()
+                                    # print('Setting {} Defense {}'.format(name, defense_line))
+                                    defense = int(defense_line)
+                                elif i == 2:
+                                    speed_line = line.strip()
+                                    # print('Setting {} Speed {}'.format(name, speed_line))
+                                    speed = int(speed_line)
+                                elif i == 3:
+                                    level_line = line.strip()
+                                    # print('Setting {} Level {}'.format(name, level_line))
+                                    level = int(level_line)
+                                else:
+                                    print('Did not find stats in {}'.format(filename))
+                                    # description.append(line.strip())
+                                    # print('Reading description {}'.format(description))
+                            
+                            enemy = Entity()
+                            enemy.name = name
+                            enemy.level = level
+                            # print('Built enemy {} level {}'.format(enemy.name, enemy.level))
+                            
+                            enemy.attack = attack
+                            enemy.defense = defense
+                            enemy.speed = speed
+                            # print('Set stats A:{} D:{} S:{}\n'.format(enemy.attack, enemy.defense, enemy.speed))
+                    
+                            self.enemy_list.append(enemy)
+                    except Exception as e:
+                        print(f"Error reading file {filepath}: {e}")
+
+    def generate_enemy(self):
+        # print('Generating enemy')
+        
+        enemy_pool = self.current_area.get_enemies()
+        # print(enemy_pool)
+        
+        selected_enemy = random.choice(enemy_pool)
+        # print('Selected enemy {}'.format(selected_enemy))
+        for i, v in enumerate(self.enemy_list):
+            if v.name == selected_enemy:
+                enemy = v
+                enemy.reset_health()
+                enemy.print_entity()
+                return enemy
+            else:
+                # print('No enemy found named {}'.format(selected_enemy))
+                pass
         
 
 class Location():
@@ -198,6 +284,7 @@ class Location():
         self._description = ''
         self.connections = []
         self.travel_time = 1
+        self.enemies = []
 
     @property
     def name(self):
@@ -228,3 +315,12 @@ class Location():
     
     def get_connections(self):
         return self.connections
+    
+    def add_enemy(self, enemy):
+        if enemy not in self.enemies:
+            self.enemies.append(enemy)
+        else:
+            pass
+    
+    def get_enemies(self):
+        return self.enemies

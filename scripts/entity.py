@@ -6,11 +6,11 @@ import math
 class Entity():
     def __init__(self):
         self.is_player = False
-        self.name = 'Joe'
+        self._name = 'Joe'
         self.level = 1
-        self.attack = 1
-        self.defense = 1
-        self.speed = 1
+        self._attack = 1
+        self._defense = 1
+        self._speed = 1
         
         self.damage_reduction = 0
         self.attack_bonus = 0
@@ -18,7 +18,16 @@ class Entity():
         
         self.health_base = 5
         self.damage_taken = 0
-        
+    
+    @property
+    def name(self):
+        return self._name
+    
+    @name.setter
+    def name(self, value):
+        removed_suffix = value.removesuffix('.txt')
+        self._name = removed_suffix.capitalize()
+
     @property
     def attack(self):
         return self._attack
@@ -105,6 +114,7 @@ class Entity():
 
     def is_dead(self):
         if self.damage_taken >= self.health:
+            self.reset_health()
             return True
         else:
             return False

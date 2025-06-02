@@ -1,4 +1,5 @@
 ['Choking crevasse']
+['Ash-revenant', 'Cinder-spawn']
 The abrupt edge of the Scorlends gives way to a brutal, upward slope. 
 You step onto the Ash-Blasted Scar, and the mountain immediately asserts its dominance. 
 The ground here is a treacherous, constantly shifting incline of coarse, dark ash and fine volcanic grit that pulls at your boots with every step. 

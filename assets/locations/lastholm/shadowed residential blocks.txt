@@ -1,4 +1,5 @@
 ['Shattered market quarter', 'Sewers', 'Weeping gardens']
+['Ghast-scavenger', 'Bone-gnawer', 'Ruin-stalker']
 The Shadowed Residential Blocks are where Lastholm truly died, not with a roar, but with a choked whisper. 
 Here, rows of once-neat homes stand as gaping shells, their roofs collapsed inward like shattered skulls 
 and their walls riddled with holes that gape like vacant eyes. 

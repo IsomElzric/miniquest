@@ -1,4 +1,5 @@
 ['Shattered market quarter']
+['Bone-gnawer', 'Ghast-scavenger']
 Before you, the Front Gates of Lastholm stand as a stark monument to a forgotten age and a crushing defeat. 
 The remnants of a formidable wall, now mostly collapsed into jagged teeth of masonry, flank the main entry. 
 The gates themselves are a testament to the city's dying throes; immense, spiked portcullis bars, frozen halfway down, 

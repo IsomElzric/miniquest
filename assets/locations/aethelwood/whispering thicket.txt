@@ -1,4 +1,5 @@
 ['Petrified grove', 'Grove of hungering vines']
+['Whisper-weaver', 'Shadow-wight']
 You push through a curtain of impossibly thick, twisted branches, and the world immediately compresses around you. 
 This isn't just dense forest; it's a living, suffocating labyrinth. 
 Trees with bark like old, scarred leather grow so close together you can barely squeeze between them, their gnarled limbs interweaving overhead to form a canopy that swallows even the Aethelwood's pervasive twilight. 

@@ -1,4 +1,5 @@
 ['Magma veins', 'Obsidian throne']
+['Ash-revenant', 'Void-gazer', 'Obsidian-carapaced beast']
 A dark, gaping entrance, impossibly carved into the sheer mountainside, beckons or perhaps compels you inward. 
 You step into the Twisted Catacombs, and the roar of the mountain's open face is muffled, replaced by a suffocating, still silence. 
 The air here is thick with extreme heat, the faint, sickly-sweet smell of long-dead things, and a heavy sulfurous tang. 

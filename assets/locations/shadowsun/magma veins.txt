@@ -1,4 +1,5 @@
 ['Choking crevasse', 'Obsidian labyrinth', 'Twisted catacombs']
+['Cinder-spawn', 'Infernal wraith']
 The air grows searingly hot, thick with the smell of scorched rock and something raw, primal. 
 The very ground here is a fractured, unstable crust, alive with danger. 
 Glowing fissures and jagged cracks riddle the rock underfoot, from which raw, red magma oozes forth like festering, molten wounds. 

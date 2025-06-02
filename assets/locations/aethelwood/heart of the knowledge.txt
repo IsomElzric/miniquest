@@ -1,4 +1,5 @@
 ['Sunken watchtower', 'Scorlends']
+['Lore-ghost', 'Gnarled horror', 'Root-bound abomination']
 The Aethelwood seems to culminate here, in a space that defies comprehension. 
 This is not a clearing, nor a simple grove. 
 At its center stands an impossibly ancient tree, its trunk a swirling vortex of dark, pulsating bark, seeming to ripple with unseen energies. 

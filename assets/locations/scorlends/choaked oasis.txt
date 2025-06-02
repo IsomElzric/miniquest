@@ -1,4 +1,5 @@
 ['Obsidian spires', 'Scavenger\'s ridge', 'Ash-choked ruins']
+['Ash-runner', 'Rock-hound']
 The relentless, barren expanse of the Scorlends offers a deceptive dip in the distance, promising respite. 
 As you approach, a sparse cluster of desperately struggling, thorny scrub and a few gnarled, sickly-looking trees come into view, an impossible splash of green in this desolate land. 
 At its heart, a pool of water, murky and still, offers the tantalizing scent of minerals, barely enough to quell your thirst. 

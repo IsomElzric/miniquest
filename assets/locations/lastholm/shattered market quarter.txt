@@ -1,4 +1,5 @@
 ['Crumbling gates', 'Shadowed residential blocks', 'Weeping gardens']
+['Ghast-scavenger', 'Bone-gnawer']
 The Shattered Market Quarter of Lastholm is a testament to hurried, desperate flight. 
 Once, its cobblestones would have echoed with the clamor of trade; now, they are choked with a century of refuse, 
 broken timber from collapsed stalls, and an insidious carpet of black moss that seems to drink the very light. 

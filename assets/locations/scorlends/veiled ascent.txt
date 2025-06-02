@@ -1,4 +1,5 @@
 ['Sulphur wastes', 'Shadowsun']
+['Vapor-stalker', 'Rock-hound', 'Sulphur-crawler']
 The landscape here begins its true ascent, the ground twisting and rising as you push deeper into the Scorlends. 
 The looming presence of the volcano, often obscured by haze from afar, now utterly dominates the horizon, its colossal peak a bruised, menacing silhouette. 
 The ground underfoot is increasingly composed of solidified, jagged lava flows, like ancient, tortured rivers of black glass. 

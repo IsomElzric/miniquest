@@ -1,4 +1,5 @@
 ['Choking crevasse', 'Magma veins']
+['Obsidian-carapaced beast', 'Cinder-spawn']
 Beyond the crevasse, the mountain transforms into a truly alien landscape. 
 You find yourself trapped within the Obsidian Labyrinth, a chaotic, razor-sharp maze of massive, gleaming black volcanic glass. 
 These aren't merely spires; they are intricate, towering walls and collapsed arches that twist into a confusing, dangerous network of narrow passages and disorienting dead ends. 

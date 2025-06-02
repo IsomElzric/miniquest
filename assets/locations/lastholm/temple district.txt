@@ -1,4 +1,5 @@
 ['Sewers', 'Aethelwood']
+['Ruin-stalker', 'Stone-flesh golem']
 The Temple District is a chilling testament to a faith that ultimately offered no salvation. 
 The once-sacred grounds are now paved with broken mosaic tiles and crumbling statuary, 
 swallowed by aggressive weeds that push through the cracks like skeletal fingers. 

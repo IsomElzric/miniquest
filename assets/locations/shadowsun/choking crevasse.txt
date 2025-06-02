@@ -1,4 +1,5 @@
 ['Ash-blasted scar', 'Obsidian labyrinth', 'Magma veins']
+['Void-gazer', 'Ash-revenant']
 Your perilous climb along the steep, ash-covered slopes is abruptly interrupted. 
 The ground simply ends, opening into a vast, terrifying tear in the earth. 
 Its depths plunge out of sight, swallowed by the swirling ash and the infernal glow that filters up from unimaginable distances below. 

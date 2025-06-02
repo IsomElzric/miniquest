@@ -1,4 +1,5 @@
 ['Grove of hungering vines', 'Petrified grove', 'Sunken watchtower']
+['Shadow-wight', 'Whisper-weaver']
 The ground beneath your feet suddenly softens, becoming spongy and then slick with an unwholesome dampness. 
 You find yourself in a low-lying section of the Aethelwood, a vast, shallow mire where the dark, murky water stretches out between the trees, reflecting the oppressive canopy with unnerving clarity. 
 Every twisted, skeletal tree emerging from the depths has a perfect, still mirror image below, making it difficult to discern where reality ends and reflection begins. 
