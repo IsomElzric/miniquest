@@ -1,4 +1,7 @@
 from abc import ABC, abstractmethod
+from scripts.combat import Combat
+from scripts.entity import Entity
+import sys
 import os
 
 
@@ -7,7 +10,7 @@ ART_PATH = 'miniquest/assets/art/'
 SOUND_PATH = 'miniquest/assets/sound/'
 
 
-class Travel():
+class World():
     def __init__(self) -> None:
         self.time = 0
         self.current_area = Location()
@@ -15,6 +18,9 @@ class Travel():
 
         self.build_areas()
         self.set_location('Lastholm')
+
+        self.player = Entity()
+        self.player.is_player = True
 
     def set_location(self, value):
         for i, v in enumerate(self.area_list):
@@ -63,20 +69,13 @@ class Travel():
                     except Exception as e:
                         print(f"Error reading file {filepath}: {e}")
       
-    def move_area(self, value):
-        # print('Player has moved to {}'.format(value))
-        self.set_location(value)
-        self.increment_time(self.current_area.travel_time)
-        self.display_current_area()
-
-    def display_current_area(self):           
-        print('Current location: {}'.format(self.current_area.name))
-        print()
-        print(self.current_area.description)
-        print()
+    def move_area(self):
         connections = self.current_area.get_connections()
+        c = 1
         for i, n in enumerate(connections):
             print('{}. {}'.format(i + 1, n))
+            c += 1
+        print('{}. Stay'.format(c))
         print()
         new_location = input('What is your destination? ')
 
@@ -88,9 +87,19 @@ class Travel():
                 name = new_location.capitalize()
                 index = connections.index(name)
 
-            self.move_area(connections[index])
+            # print('Player has moved to {}'.format(value))
+            self.set_location(connections[index])
+            self.increment_time(self.current_area.travel_time)
+            self.display_current_area()
         except:
-            print('Location not listed')
+            self.display_current_area()
+
+    def display_current_area(self):           
+        print('Current location: {}'.format(self.current_area.name))
+        print()
+        print(self.current_area.description)
+        print()
+        print(self.display_location_options())
 
     def increment_time(self, value):
         self.time += value
@@ -113,6 +122,75 @@ class Travel():
     def rest(self):
         self.start_day()
 
+    def display_location_options(self):
+        print('1. Fight')
+        print('2. Travel')
+        print('3. Leave')
+        print()
+        choice = input('What will you do? ')
+        print()
+
+        if int(choice) == 1:
+            self.fight(self.current_area)
+            self.increment_time(1)
+            self.display_current_area()
+
+        elif int(choice) == 2:
+            self.move_area()
+
+        elif int(choice) == 3:
+            sys.exit()
+        sys.exit()
+
+    def fight(self, location):
+        fight = Combat()
+        player = self.player
+
+        monster = Entity()
+        monster.name = 'Monster'
+        monster.attack = 2
+        monster.defense = 1
+        monster.speed = 3
+        monster.reset_health()
+        monster.print_entity()
+
+        fight.add_combatant(player)
+        fight.add_combatant(monster)
+        fight.print_combatants()
+        fight.start_combat()
+
+    def create_character(self):
+        self.player.name = input('What is your name? ')
+        print()
+        print('1. Quarryman')
+        print('2. Loom-runner')
+        print('3. Waller')
+        print('4. Pest-culler')
+        print()
+        background = int(input('What is your background? '))
+        if background == 1:
+            self.player.attack = 5
+            self.player.defense = 3
+            self.player.speed = 1
+
+        elif background == 2:
+            self.player.attack = 3
+            self.player.defense = 1
+            self.player.speed = 5
+
+        elif background == 3:
+            self.player.attack = 1
+            self.player.defense = 5
+            self.player.speed = 3
+
+        elif background == 4:
+            self.player.attack = 4
+            self.player.defense = 1
+            self.player.speed = 4
+        
+        self.player.reset_health()
+        self.player.print_entity()
+        
 
 class Location():
     def __init__(self) -> None:

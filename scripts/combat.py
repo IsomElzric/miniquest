@@ -39,25 +39,25 @@ class Combat():
         input('Press enter to attack.\n')
 
         damage = attacker.roll_attack()
-        print('You deal {} damage!'.format(damage))
+        print('You deal {} damage!\n'.format(damage))
         
         defender.take_damage(damage)
-        print('{} has {} health.'.format(defender.name, defender.health))
+        print('{} has {} health.\n'.format(defender.name, defender.health))
 
         if self.check_death(defender):
-            print('You have defeated {}!'.format(defender.name))
+            print('You have defeated {}!\n'.format(defender.name))
             self.run = False
 
     def enemy_turn(self, attacker, defender):
-        print('\nYou are being attacked!')
+        print('\nYou are being attacked!\n')
         damage = attacker.roll_attack()
-        print('You have been dealt {} damage!'.format(damage))
+        print('You have been dealt {} damage!\n'.format(damage))
 
         defender.take_damage(damage)
-        print('You have {} health left.'.format(defender.health))
+        print('You have {} health left.\n'.format(defender.health))
 
         if self.check_death(defender):
-            print('You have died!')
+            print('You have died!\n')
             self.run = False
 
     def update_fighters(self):
