@@ -1,5 +1,5 @@
 # MiniQuest
-A simple text-based rpg where the goal is to quest out to defeat enemies, gain experience, and get loot. As you begin your journey in the wild and ruined city of Lastholm, eventually your quest takes you all the way to the mysteries live volcano close by.
+A simple text-based rpg where the goal is to quest out to defeat enemies, gain experience, and get loot. As you begin your journey in the wild and ruined city of Lastholm, eventually your quest takes you all the way to the ominous live volcano close by.
 
 ## Getting Started
 ---
