@@ -4,6 +4,7 @@ from scripts.entity import Entity
 from scripts.builder import Builder
 from scripts.location import Location
 from scripts.inventory import Inventory
+from scripts.loot import Loot
 import sys
 import os
 import random
@@ -18,25 +19,30 @@ SOUND_PATH = 'assets/sound/'
 class World():
     def __init__(self) -> None:
         self.builder = Builder()
+        self.loot = Loot()
         
         self.time = 0
         self.current_area = Location()
         self.area_list = self.builder.build_areas()
 
         self.set_location('Lastholm')
-        self.camp = 'Broken hearth'
+        self.camp = 'Lastholm'
 
         self.player = Entity()
-        self.player.is_player = True
-
+        
         self.enemy_list = self.builder.build_enemies()
         
-        self.player.inventory.set_items(self.builder.build_items())
-        self.all_weapons = []
-        self.all_armors = []
-        self.all_crafting = []
-        self.all_wealth = []
-        self.all_trinkets = []
+        self.all_items = self.builder.build_items()
+        # for i in self.all_items:
+            # print('Item {} built and added to World'.format(i.name))
+
+        self.player.inventory.set_items(self.all_items)
+        self.loot.set_items(self.all_items)
+
+    def create_character(self):
+        self.builder.create_character()
+        self.player = self.builder.get_player()
+        self.player.is_player = True
 
     def set_location(self, value):
         for i, v in enumerate(self.area_list):
@@ -46,6 +52,14 @@ class World():
                 # print('Found {} and set current location as {}'.format(value, self.current_area.name))
                 if self.current_area.name in ['Lastholm', 'Aethelwood', 'Scorlends', 'Shadowsun']:
                     self.camp = self.current_area.name
+                elif self.current_area.name == 'Shadowed residential blocks':
+                    self.camp = 'Broken hearth'
+                elif self.current_area.name == 'Petrified grove':
+                    self.camp = 'Quiet glade'
+                elif self.current_area.name == 'Scavenger\'s ridge':
+                    self.camp = 'Iron spring'
+                elif self.current_area.name == 'Magma veins':
+                    self.camp = 'Last anvil'
                 break
             else:
                 # print('Area not found')
@@ -77,7 +91,8 @@ class World():
         except:
             self.display_current_area()
 
-    def display_current_area(self):           
+    def display_current_area(self):
+        self.player.update_stats()        
         print('Current location: {}'.format(self.current_area.name))
         print()
         print(self.current_area.description)
@@ -112,6 +127,8 @@ class World():
         print('1. Fight')
         print('2. Travel')
         print('3. Rest')
+        if self.current_area.name == self.camp:
+            print('4. Prepare')
         print()
         choice = input('What will you do? ')
         print()
@@ -129,11 +146,14 @@ class World():
 
         elif int(choice) == 3:    
             self.rest()
+
+        elif int(choice) == 4:
+            self.prepare()
         else:
             sys.exit()
 
     def fight(self):
-        fight = Combat()
+        fight = Combat(self.current_area.name, self.loot)
         player = self.player
         player.print_entity()
 
@@ -161,3 +181,9 @@ class World():
             else:
                 # print('No enemy found named {}'.format(selected_enemy))
                 pass
+
+    def prepare(self):
+        self.player.print_entity()
+        self.player.inventory.open_bag()
+        print()
+        self.display_current_area()

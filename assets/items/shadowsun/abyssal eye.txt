@@ -1,5 +1,5 @@
 trinket
-{'attack': 1, 'defense': 1, 'speed': 0,}
+{'attack': 1, 'defense': 1, 'speed': 0}
 ['Choking crevasse']
 A small, perfectly round, unblinking 'eye' of unknown origin, incredibly dark and smooth
 It seems to draw in the light around it, making it difficult to truly see.

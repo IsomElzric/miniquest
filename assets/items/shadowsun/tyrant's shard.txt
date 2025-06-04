@@ -1,5 +1,5 @@
 trinket
-{'attack': 1, 'defense': 1, 'speed': 1,}
+{'attack': 1, 'defense': 1, 'speed': 1}
 ['Obsidian throne']
 A minute, pulsating fragment of the same unique rock as the Tyrant's Vein Stone
 It pulses with faint red light and emanates an almost imperceptible, oppressive hum.

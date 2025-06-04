@@ -18,7 +18,7 @@ def main():
     elif type == 'trinket':
         attack = "'attack': {},".format(input('What is the item\'s attack? '))
         defense = "'defense': {},".format(input('What is the item\'s defense? '))
-        speed = "'speed': {},".format(input('What is the item\'s speed? '))
+        speed = "'speed': {}".format(input('What is the item\'s speed? '))
         stats = "{} {} {}".format(attack, defense, speed)
         value = '{' + stats + '}'
     else:

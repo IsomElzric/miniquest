@@ -9,11 +9,19 @@ class Item(ABC):
         self._name = ''
         self._description = ''
         self._type = ''
-        self.rarity = 'Common'
+        self.ammount = 1
+        
         self._stat_modifiers = {}
         self.damage = 0
         self.mitigation = 0
         self.finesse = 0
+
+        self.attack = 0
+        self.defense = 0
+        self.speed = 0
+
+        self.worth = 0
+
         self.spawn_location = []
 
     @property
@@ -45,6 +53,8 @@ class Item(ABC):
     def type(self, value):
         if value not in TYPE_LIST:
             self._type = 'Unknown'
+        else:
+            self._type = value
 
     @property
     def stat_modifiers(self):
@@ -52,7 +62,48 @@ class Item(ABC):
     
     @stat_modifiers.setter
     def stat_modifiers(self, value):
-        self._damage = value['damage']
-        self._mitigation = value['mitigation']
-        self._finesse = value['finesse']
-        self.stat_modifiers = value
+        self._stat_modifiers = value
+        if 'attack' in value:
+            # print('Setting stats for trinket')
+            self.attack = value['attack']
+            self.defense = value['defense']
+            self.speed = value['speed']
+        else:
+            # print('Setting stats for non-trinket')
+            self.damage = value['damage']
+            self.mitigation = value['mitigation']
+            self.finesse = value['finesse']
+
+    def display(self):
+        print('{} ({})'.format(self.name, self.type))
+        if self.type in ['weapon', 'armor']:
+            print('Damage +{}, Mitigation +{}, Finesse +{}'.format(self.damage, self.mitigation, self.finesse))
+        elif self.type == 'trinket':
+            print('Attack +{}, Defense +{}, Speed +{}'.format(self.attack, self.damage, self.speed))
+        elif self.type == 'wealth':
+            print('Appraised as having {} value.'.format(self.appraise_worth()))
+        elif self.type == 'crafting':
+            print('This can be used to improve weapons or armor.')
+        
+        print('Description:\n- {}'.format(self.description))
+        print()
+        input('Press enter to return')
+
+    def appraise_worth(self):
+        appraisal = 'worthless'
+        if self.worth == 0:
+            appraisal = 'worthless'
+        elif self.worth == 1:
+            appraisal = 'low'
+        elif self.worth <= 3:
+            appraisal = 'moderate'
+        elif self.worth <= 5:
+            appraisal = 'high'
+        elif self.worth <= 9:
+            appraisal = 'very high'
+        elif self.worth <= 13:
+            appraisal = 'extremely high'
+        elif self.worth > 13:
+            appraisal = 'priceless'
+
+        return appraisal 

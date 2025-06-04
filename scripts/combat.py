@@ -1,6 +1,11 @@
+from scripts.loot import Loot
+
+
 class Combat():
-    def __init__(self):
+    def __init__(self, area, loot):
         self.combatant_list = []
+        self.loot = loot
+        self.area = area
         self.run = True
 
     def add_combatant(self, fighter):
@@ -42,19 +47,20 @@ class Combat():
         print('You deal {} damage!\n'.format(damage))
         
         defender.take_damage(damage)
-        print('{} has {} health.\n'.format(defender.name, defender.health))
+        print('{} has {} health.\n'.format(defender.name, defender.current_health))
 
         if self.check_death(defender):
             print('You have defeated {}!\n'.format(defender.name))
+            self.generate_loot(attacker)
             self.run = False
 
     def enemy_turn(self, attacker, defender):
-        print('\nYou are being attacked!\n')
+        print('You are being attacked!\n')
         damage = attacker.roll_attack()
         print('You have been dealt {} damage!\n'.format(damage))
 
         defender.take_damage(damage)
-        print('You have {} health left.\n'.format(defender.health))
+        print('You have {} health left.\n'.format(defender.current_health))
 
         if self.check_death(defender):
             print('You have died!\n')
@@ -65,3 +71,10 @@ class Combat():
 
     def check_death(self, entity):
         return entity.is_dead()
+    
+    def generate_loot(self, player):
+        # loot.set_items(player.inventory.get_items())
+        drop = self.loot.get_drop_by_area(player, self.area)
+        print('As the creature lays dead you find a {}!'.format(drop.name))
+        self.loot.add_item_to_inventory(player, drop)
+        

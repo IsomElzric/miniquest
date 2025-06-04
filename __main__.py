@@ -2,6 +2,7 @@ import arcade
 from scripts.world import World
 from scripts.builder import Builder
 import sys
+import os
 
 
 TITLE = 'Miniquest'
@@ -10,6 +11,7 @@ HEIGHT = 720
 
 
 def main():
+    os.chdir('miniquest/')
     world = World()
     loop = True
 
@@ -23,8 +25,7 @@ def main():
         
         if i == '1':  
             loop = True
-            builder = Builder()
-            builder.create_character()
+            world.create_character()
 
             while loop:
                 world.display_current_area()

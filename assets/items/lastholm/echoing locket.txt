@@ -1,5 +1,5 @@
 trinket
-{'attack': 0, 'defense': 1, 'speed': 1,}
+{'attack': 0, 'defense': 1, 'speed': 1}
 ['Shadowed residential blocks']
 A small, tarnished silver or copper locket, often empty or containing a crumbled, unrecognizable remnant
 When held, you might hear faint, distant whispers or echoes of a life long past.

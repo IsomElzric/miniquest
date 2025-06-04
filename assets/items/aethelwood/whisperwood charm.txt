@@ -1,5 +1,5 @@
 trinket
-{'attack': 1, 'defense': 1, 'speed': 0,}
+{'attack': 1, 'defense': 1, 'speed': 0}
 ['Whispering thicket', 'Petrified grove']
 A small, smooth piece of Aethelwood, often carved or naturally shaped, that feels strangely warm to the touch
 It seems to absorb some of the forest's oppressive hum.

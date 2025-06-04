@@ -11,11 +11,10 @@ ITEM_PATH = 'assets/items/'
 
 class Builder():
     def __init__(self) -> None:
-        pass
+        self.player = Entity()
 
     def create_character(self):
-        player = Entity()
-        player.name = input('What is your name? ')
+        self.player.name = input('What is your name? ')
         print()
         print('1. Quarryman')
         print('2. Loom-runner')
@@ -24,27 +23,31 @@ class Builder():
         print()
         background = int(input('What is your background? '))
         if background == 1:
-            player.attack = 5
-            player.defense = 3
-            player.speed = 1
+            self.player.attack = 5
+            self.player.defense = 3
+            self.player.speed = 1
 
         elif background == 2:
-            player.attack = 3
-            player.defense = 1
-            player.speed = 5
+            self.player.attack = 3
+            self.player.defense = 1
+            self.player.speed = 5
 
         elif background == 3:
-            player.attack = 1
-            player.defense = 5
-            player.speed = 3
+            self.player.attack = 1
+            self.player.defense = 5
+            self.player.speed = 3
 
         elif background == 4:
-            player.attack = 4
-            player.defense = 1
-            player.speed = 4
+            self.player.attack = 4
+            self.player.defense = 1
+            self.player.speed = 4
         
-        player.reset_health()
-        player.print_entity()
+        self.player.update_stats()
+        self.player.reset_health()
+        self.player.print_entity()
+
+    def get_player(self):
+        return self.player
 
     def build_areas(self):
         area_list = []
@@ -149,7 +152,7 @@ class Builder():
         item_list = []
         for dirpath, _, filenames in os.walk(ITEM_PATH):
             for filename in filenames:
-                print('Attempting to walk through {}'.format(filename))
+                # print('Attempting to walk through {}'.format(filename))
                 if filename.endswith(".txt"):
                     filepath = os.path.join(dirpath, filename)
                     try:
@@ -159,15 +162,23 @@ class Builder():
                             description = []
                             stat_modifiers = {}
                             location = []
+                            worth = 0
                             for i, line in enumerate(file):
                                 if i == 0:
                                     type_line = line.strip()
-                                    print('Setting {} type to {}'.format(name, type_line))
+                                    # print('Setting {} type to {}'.format(name, type_line))
                                     type = type_line
+
                                 elif i == 1:
                                     stat_line = line.strip()
-                                    print('Setting {} stat modifiers'.format(name))
-                                    stat_modifiers = eval(stat_line)
+                                    # print('Setting stat modifiers as {}'.format(stat_line))
+
+                                    if type in ['weapon', 'armor', 'crafting', 'trinket']:
+                                        stat_modifiers = eval(stat_line)
+                                    
+                                    elif type == 'wealth':
+                                        worth = int(stat_line)
+
                                 elif i == 2:
                                     location_line = line.strip()
                                     check = eval(location_line)
@@ -175,25 +186,33 @@ class Builder():
                                         location = ['global']
                                     else:
                                         location = check
-                                    print('Setting the drop locations as {}'.format(location))
+                                    # print('Setting the drop locations as {}'.format(location))
                                 else:
                                     description.append(line.strip())
-                                    print('Setting {} description'.format(name))
+                                    # print('Setting {} description'.format(name))
                             
-                            item = Item()
-                            item.name = name
-                            item.type = type
-                            print('Built item {} {}'.format(item.name, item.type))
-                            
-                            item.description = description
-                            print('Set description as {}'.format(item.description))
+                        item = Item()
+                        item.name = name
+                        item.type = type
+                        # print('Built item {} type {}'.format(item.name, item.type))
+                        
+                        item.description = description
+                        # print('Set description as {}'.format(item.description))
 
-                            item.spawn_location = location
-                            print('Added to {}\n'.format(item.spawn_location))
-
+                        item.spawn_location = location
+                        # print('Added to {}'.format(item.spawn_location))
+                        
+                        if type == 'wealth':
+                            item.worth = worth
+                            # print('Set worth {}'.format(item.worth))
+                        else:
                             item.stat_modifiers = stat_modifiers
-                            item_list.append(item)
+                            # print('Set stat modifiers {}'.format(item.stat_modifiers))
+                        
+                        item_list.append(item)
+                        # print('Item successfully appended to the item list!\n')
+                    
                     except Exception as e:
-                        print(f"Error reading file {filepath}: {e}")
+                        print(f"Error reading file {filepath}: {e}\n")
         
         return item_list
