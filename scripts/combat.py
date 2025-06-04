@@ -18,7 +18,7 @@ class Combat():
             self.combatant_list.append(fighter)
 
     def print_combatants(self):
-        print('{} acts first with speed {}! {} acts second with speed {}!'.format(
+        print('{} acts first with base speed {}! {} acts second with base speed {}!'.format(
             self.combatant_list[0].name, 
             self.combatant_list[0].speed, 
             self.combatant_list[1].name, 
