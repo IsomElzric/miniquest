@@ -62,6 +62,7 @@ class Inventory():
             # print('stored item {}'.format(i))
         print('You open your worn rucksack and carefully arrange the conetnts around you.')
         print()
+        """
         if self.equipped_items['Held'] is not None:
             print('You are currently weilding a {} as your weapon.'.format(self.equipped_items['Held'].name))
         if self.equipped_items['Body'] is not None:
@@ -78,7 +79,7 @@ class Inventory():
                 
             print('You are currently wearing {} as your trinkets.'.format(formated_trinkets))
         print()
-
+        """
         consolidated_items = Counter(self.stored_items)
         for item, count in consolidated_items.items():
             if count > 1:
