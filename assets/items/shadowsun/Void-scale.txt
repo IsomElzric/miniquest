@@ -1,0 +1,5 @@
+crafting
+{'damage': 1, 'mitigation': 3, 'finesse': 0}
+['Choking crevasse']
+A piece of incredibly tough, dark, and smooth scale from a Void-Gazer
+It feels unnaturally cold and seems to absorb light.

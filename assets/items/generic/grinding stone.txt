@@ -1,0 +1,5 @@
+crafting
+{'damage': 2, 'mitigation': 0, 'finesse': 0}
+[]
+A hard, abrasive rock, often volcanic, perfect for sharpening tools and blades
+Its surface is rough, yet surprisingly effective.

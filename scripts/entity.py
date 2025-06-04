@@ -1,3 +1,4 @@
+from scripts.inventory import Inventory
 from random import Random
 from abc import ABC, abstractmethod
 import math
@@ -18,6 +19,8 @@ class Entity():
         
         self.health_base = 5
         self.damage_taken = 0
+
+        self.inventory = Inventory()
     
     @property
     def name(self):
@@ -54,6 +57,9 @@ class Entity():
 
     def reset_health(self):
         self.health = self.health_base + self.round_up(self.defense / 2)
+
+    def set_health(self, value):
+        self.health += value
     
     def roll_attack(self):
         r = Random()
@@ -100,7 +106,7 @@ class Entity():
             
             print('{} took {} damage after defenses...'.format(self.name, total_damage))
             
-            self.health -= total_damage
+            self.set_health(-damage)
 
     def print_entity(self):
         print('{} level {}: Health {}, Attack {}, Defense {}, Speed {}'.format(self.name, self.level, self.health, self.attack, self.defense, self.speed))

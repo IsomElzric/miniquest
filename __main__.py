@@ -1,17 +1,12 @@
 import arcade
-from scripts.entity import Entity
-from scripts.combat import Combat
 from scripts.world import World
+from scripts.builder import Builder
 import sys
 
 
 TITLE = 'Miniquest'
 WIDTH = 1080
 HEIGHT = 720
-
-LOCATION_PATH = 'miniquest/assets/locations/'
-ART_PATH = 'miniquest/assets/art/'
-SOUND_PATH = 'moniquest/assets/sound/'
 
 
 def main():
@@ -20,25 +15,22 @@ def main():
 
     while loop:
         print("""Miniquest\n
-            1. Create Character
-            2. Travel
-            3. Exit Game
+            1. New Game
+            2. Exit Game
             """)
         
         i = input('Enter selection: ')
-
-        if i == '1':
-            world.create_character()
         
-        elif i == '2':
-            world.build_areas()  
+        if i == '1':  
             loop = True
+            builder = Builder()
+            builder.create_character()
 
             while loop:
                 world.display_current_area()
                 loop = False
 
-        elif i == '3':
+        elif i == '2':
             loop = False
             sys.exit
 

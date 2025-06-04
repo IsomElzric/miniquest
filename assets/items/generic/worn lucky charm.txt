@@ -1,0 +1,5 @@
+trinket
+{'attack': 1, 'defense': 0, 'speed': 0,}
+[]
+A small, weather-beaten token – perhaps a crudely carved piece of bone, a smooth pebble, or a twisted metal scrap
+Its origins are unknown, but it feels oddly comforting in the hand.

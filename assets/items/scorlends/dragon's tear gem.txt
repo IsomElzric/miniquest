@@ -1,0 +1,5 @@
+wealth
+10
+['Obsidian spires', 'Veiled ascent']
+A naturally formed, teardrop-shaped gem of hardened, incredibly pure obsidian, often found near the mountain's base
+Its deep black sheen is mesmerizing, and some believe it to be the condensed sorrow of the land itself.

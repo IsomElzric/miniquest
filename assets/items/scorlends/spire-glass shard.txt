@@ -1,0 +1,5 @@
+trinket
+{'attack': 1, 'defense': 0, 'speed': 1,}
+['Obsidian spires']
+A small, razor-sharp fragment of the pure, black obsidian spires
+It reflects light in unsettling ways and feels incredibly cold to the touch.

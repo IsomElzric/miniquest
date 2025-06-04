@@ -1,0 +1,5 @@
+trinket
+{'attack': 0, 'defense': 1, 'speed': 1,}
+['Mire of silent reflections']
+A perfectly smooth, dark pebble found in the bog
+When wet, it appears to shimmer with faint, internal lights, and might emit a barely audible, soothing hum.
