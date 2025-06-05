@@ -102,6 +102,7 @@ class Inventory():
             print('2. Equip')
             print('3. Sell')
             print('4. Close bag')
+            print()
             action = int(input('What would you like to do? '))
 
             if action == 1:
