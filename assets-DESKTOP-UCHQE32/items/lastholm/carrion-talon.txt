@@ -1,0 +1,5 @@
+trinket
+{'attack': 2, 'defense': 0, 'speed': 0}
+['Shattered market quarter']
+A desiccated, incredibly sharp claw from a particularly old or large Ghast-Scavenger
+It feels unnervingly light but holds a cutting edge.

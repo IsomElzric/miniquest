@@ -1,0 +1,4 @@
+weapon
+{'damage': 4, 'mitigation': 0, 'finesse': 2}
+[]
+Once a common tool, now dulled and chipped, but still capable of felling foes.

@@ -1,0 +1,5 @@
+wealth
+3
+[]
+Small, translucent lumps of incredibly tough, petrified tree sap or crystalline mineral formations
+They are resistant to decay and can be surprisingly dense.

@@ -1,0 +1,15 @@
+['Sewers', 'Aethelwood']
+['Ruin-stalker', 'Stone-flesh golem']
+The Temple District is a chilling testament to a faith that ultimately offered no salvation. 
+The once-sacred grounds are now paved with broken mosaic tiles and crumbling statuary, 
+swallowed by aggressive weeds that push through the cracks like skeletal fingers. 
+The grand temples, built to inspire awe, now inspire only dread. 
+Their mighty arches stand as hollow eyesores, their domed roofs partially collapsed, 
+revealing the perpetually overcast sky. 
+The silence here is absolute, an oppressive weight that seems to devour all sound, 
+as if the very air refuses to carry any lingering prayers. 
+Within the larger structures, the consecrated altars are overturned or defiled with strange, 
+unnatural growths - perhaps grotesque fungi that pulse with a faint, sickly luminescence, 
+or patterns of slime that crawl across ancient holy symbols. 
+This district feels like a gaping wound in the city's soul, where the light of belief was violently snuffed out, 
+leaving behind only an echoing void and the pervasive, cloying scent of spiritual decay.

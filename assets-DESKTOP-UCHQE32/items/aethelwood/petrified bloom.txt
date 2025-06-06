@@ -1,0 +1,5 @@
+wealth
+5
+['Petrified grove']
+The perfectly preserved, stone-hard form of an ancient, unknown flower, its delicate petals and stem now solid rock
+It's often found strangely undamaged.

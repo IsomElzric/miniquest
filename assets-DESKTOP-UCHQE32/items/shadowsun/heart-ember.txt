@@ -1,0 +1,5 @@
+trinket
+{'attack': 2, 'defense': 0, 'speed': 0}
+['Magma veins']
+A tiny, polished fragment of cooled magma that perpetually glows with a faint, internal red light, as if a spark of the mountain's wrath is trapped within
+It's warm to the touch.

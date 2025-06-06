@@ -49,37 +49,21 @@ class Inventory():
 
     def stow_item(self, value):
         if value.type == 'weapon':
-            self.equipped_items['Held'] = None
             self.stored_items.append(self.equipped_items['Held'])
+            self.equipped_items['Held'] = None
             print('Stowed {} in bag'.format(value.name))
+
         elif value.type == 'armor':
-            self.equipped_items['Body'] = None
             self.stored_items.append(self.equipped_items['Body'])
+            self.equipped_items['Body'] = None
             print('Stowed {} in bag'.format(value.name))
 
     def open_bag(self):
         # for i in self.stored_items:
             # print('stored item {}'.format(i))
-        print('You open your worn rucksack and carefully arrange the conetnts around you.')
+        print('You open your worn rucksack and carefully arrange the contents around you.')
         print()
-        """
-        if self.equipped_items['Held'] is not None:
-            print('You are currently weilding a {} as your weapon.'.format(self.equipped_items['Held'].name))
-        if self.equipped_items['Body'] is not None:
-            print('You are currently wearing {} for armor.'.format(self.equipped_items['Body'].name))
-        
-        if self.equipped_items['Trinkets']:
-            formated_trinkets = ''
-            for i, v in enumerate(self.equipped_items['Trinkets']):
-                if i == len(self.equipped_items['Trinkets']) - 1:
-                    trinket = '{}'.format(v.name)
-                else:
-                    trinket = '{}, '.format(v.name)
-                formated_trinkets += trinket
-                
-            print('You are currently wearing {} as your trinkets.'.format(formated_trinkets))
-        print()
-        """
+
         consolidated_items = Counter(self.stored_items)
         for item, count in consolidated_items.items():
             if count > 1:

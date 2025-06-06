@@ -175,6 +175,7 @@ class World():
         for i, v in enumerate(self.enemy_list):
             if v.name == selected_enemy:
                 enemy = v
+                enemy.update_stats()
                 enemy.reset_health()
                 enemy.print_entity()
                 return enemy

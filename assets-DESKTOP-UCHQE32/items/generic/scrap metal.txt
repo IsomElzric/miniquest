@@ -1,0 +1,5 @@
+crafting
+{'damage': 1, 'mitigation': 1, 'finesse': 0}
+[]
+Assorted pieces of rusted tools, twisted armor fragments, and bits of broken machinery
+It's often sharp-edged and corroded, but still salvageable.

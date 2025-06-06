@@ -1,0 +1,5 @@
+trinket
+{'attack': 0, 'defense': 1, 'speed': 1}
+[]
+A small, dull bead, possibly made of ancient glass or polished stone, found amidst rubble or dirt
+It feels strangely heavy and cold.
