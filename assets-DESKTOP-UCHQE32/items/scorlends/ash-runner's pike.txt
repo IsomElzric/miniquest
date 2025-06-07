@@ -1,5 +1,0 @@
-weapon
-{'damage': 4, 'mitigation': 8, 'finesse': 5}
-['Scavenger\'s ridge']
-A long, light spear fashioned from scavenged metal piping, reinforced with hardened, sharpened volcanic rock at its tip. 
-It’s balanced for throwing as well as thrusting.

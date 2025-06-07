@@ -1,5 +1,0 @@
-crafting
-{'damage': 3, 'mitigation': 1, 'finesse': 0}
-['Sulphur wastes']
-A shimmering, often sickly yellow or orange crystal found near volcanic vents
-It emits a faint, acrid odor and is warm to the touch.

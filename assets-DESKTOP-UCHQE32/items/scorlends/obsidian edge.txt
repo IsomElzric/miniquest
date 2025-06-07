@@ -1,5 +1,0 @@
-weapon
-{'damage': 5, 'mitigation': 2, 'finesse': 9}
-['Obsidian spires']
-A weapon (dagger or short sword) crafted from a meticulously flaked shard of the purest, sharpest black obsidian. 
-It seems to drink the light.

@@ -1,5 +1,0 @@
-trinket
-{'attack': 1, 'defense': 0, 'speed': 1}
-['Sewers']
-A tiny, perfectly preserved brass or steel cogwheel, intricately tooled, salvaged from some ancient, complex mechanism
-It still spins smoothly with a light touch.

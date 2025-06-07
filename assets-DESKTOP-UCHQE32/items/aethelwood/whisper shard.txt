@@ -1,5 +1,0 @@
-weapon
-{'damage': 3, 'mitigation': 6, 'finesse': 5}
-['Whispering thicket', 'Heart of the knowlege']
-A small, translucent shard of dark, crystalline material found embedded in an ancient tree or pulsing growth. 
-It vibrates faintly, and if held close, seems to hum with incoherent voices.

@@ -1,7 +1,0 @@
-['Choaked oasis', 'Sulphur wastes']
-['Dust-wight', 'Ash-runner']
-A slight rise in the endless undulations of stone and scree brings you to a disturbing sight: the heavily eroded and half-buried remnants of a small settlement. 
-Most structures are little more than indistinct mounds of rubble, but you can discern the faint outlines of crumbling walls, a half-buried archway, or the shattered remains of what might have been a well. 
-Everything here is coated in a thick, pervasive layer of fine, grey ash, like a shroud that has preserved a ghostly snapshot of its last moments. 
-The air is heavy, almost solemn, and kicking up the ash reveals unsettling imprints - perhaps the outline of a body, or the grotesque shape of something monstrous that was consumed by the falling debris on that terrible day. 
-The silence is profound, save for the whisper of the ash itself, which seems to sigh with the weight of forgotten horrors.

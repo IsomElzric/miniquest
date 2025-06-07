@@ -1,4 +1,0 @@
-weapon
-{'damage': 4, 'mitigation': 1, 'finesse': -2}
-[]
-The hilt and stump of what was once a proper sword or knife, now just a jagged edge.

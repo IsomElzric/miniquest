@@ -1,5 +1,0 @@
-crafting
-{'damage': 5, 'mitigation': 5, 'finesse': 5}
-['Obsidian throne']
-A rare fragment of warm, faintly pulsing rock found deep within the volcano's core, containing raw, concentrated power
-It hums with latent energy.

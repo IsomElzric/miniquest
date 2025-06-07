@@ -1,50 +1,35 @@
+# scripts/builder.py
 import os
 from scripts.location import Location
 from scripts.entity import Entity
 from scripts.item import Item
+import copy # NEW: Import copy module for deep copying entities
 
 
-LOCATION_PATH = 'assets/locations/'
-ENEMY_PATH = 'assets/enemies/'
-ITEM_PATH = 'assets/items/'
+LOCATION_PATH = 'miniquest/assets/locations/'
+ENEMY_PATH = 'miniquest/assets/enemies/'
+ITEM_PATH = 'miniquestassets/items/'
 
 
 class Builder():
-    def __init__(self) -> None:
+    def __init__(self, message_log) -> None: # Accept message_log here
         self.player = Entity()
+        self.message_log = message_log # Store message_log
 
     def create_character(self):
-        self.player.name = input('What is your name? ')
-        print()
-        print('1. Quarryman')
-        print('2. Loom-runner')
-        print('3. Waller')
-        print('4. Pest-culler')
-        print()
-        background = int(input('What is your background? '))
-        if background == 1:
-            self.player.attack = 5
-            self.player.defense = 3
-            self.player.speed = 1
-
-        elif background == 2:
-            self.player.attack = 3
-            self.player.defense = 1
-            self.player.speed = 5
-
-        elif background == 3:
-            self.player.attack = 1
-            self.player.defense = 5
-            self.player.speed = 3
-
-        elif background == 4:
-            self.player.attack = 4
-            self.player.defense = 1
-            self.player.speed = 4
+        # This method is now non-interactive for GUI compatibility.
+        # It sets up a default character. The GUI will handle input.
+        self.player.name = "Nameless Adventurer" # Default name
+        
+        # Default stats for a balanced start
+        self.player.attack = 3
+        self.player.defense = 3
+        self.player.speed = 3
         
         self.player.update_stats()
         self.player.reset_health()
-        self.player.print_entity()
+        # Ensure print_entity uses the message_log
+        self.player.print_entity(self.message_log)
 
     def get_player(self):
         return self.player
@@ -53,7 +38,6 @@ class Builder():
         area_list = []
         for dirpath, _, filenames in os.walk(LOCATION_PATH):
             for filename in filenames:
-                # print('Attempting to walk through {}'.format(filename))
                 if filename.endswith(".txt"):
                     filepath = os.path.join(dirpath, filename)
                     try:
@@ -64,35 +48,30 @@ class Builder():
                             for i, line in enumerate(file):
                                 if i == 0:
                                     connection_line = line.strip()
-                                    # print(connection_line)
                                     connections = eval(connection_line)
                                 elif i == 1:
                                     enemy_line = line.strip()
-                                    # print(enemy_line)
                                     enemies = eval(enemy_line)
                                 else:
                                     description.append(line.strip())
-                                    # print('Reading description {}'.format(description))
                             
                             location = Location()
-                            location.name = filename
-                            # print('Built location {}'.format(location.name))
+                            # Remove .txt from filename for the name
+                            location.name = os.path.splitext(filename)[0] 
                             
-                            location.description = ''
                             location.description = description
-                            # print('Set description {}'.format(location.description))
                             
-
                             for i in connections:
                                 location.build_connection(i)
-                                # print('Built connection to {}'.format(i))
                             
                             for e in enemies:
                                 location.add_enemy(e)
 
                             area_list.append(location)
                     except Exception as e:
-                        print(f"Error reading file {filepath}: {e}")
+                        self.message_log.append(f"Error reading location file {filepath}: {e}")
+                        # Keeping print for console debugging during development
+                        print(f"Error reading location file {filepath}: {e}") 
 
         return area_list
     
@@ -100,12 +79,11 @@ class Builder():
         enemy_list = []
         for dirpath, _, filenames in os.walk(ENEMY_PATH):
             for filename in filenames:
-                # print('Attempting to walk through {}'.format(filename))
                 if filename.endswith(".txt"):
                     filepath = os.path.join(dirpath, filename)
                     try:
                         with open(filepath, "r") as file:
-                            name = filename
+                            name = os.path.splitext(filename)[0] # Get name without .txt
                             attack = 1
                             defense = 1
                             speed = 1
@@ -113,72 +91,69 @@ class Builder():
                             for i, line in enumerate(file):
                                 if i == 0:
                                     attack_line = line.strip()
-                                    # print('Setting {} Attack {}'.format(name, attack_line))
                                     attack = int(attack_line)
                                 elif i == 1:
                                     defense_line = line.strip()
-                                    # print('Setting {} Defense {}'.format(name, defense_line))
                                     defense = int(defense_line)
                                 elif i == 2:
                                     speed_line = line.strip()
-                                    # print('Setting {} Speed {}'.format(name, speed_line))
                                     speed = int(speed_line)
                                 elif i == 3:
                                     level_line = line.strip()
-                                    # print('Setting {} Level {}'.format(name, level_line))
                                     level = int(level_line)
                                 else:
-                                    print('Did not find stats in {}'.format(filename))
-                                    # description.append(line.strip())
-                                    # print('Reading description {}'.format(description))
+                                    self.message_log.append(f'Warning: Unexpected line in enemy file {filename}')
+                                    print(f'Warning: Unexpected line in enemy file {filename}')
                             
                             enemy = Entity()
                             enemy.name = name
                             enemy.level = level
-                            # print('Built enemy {} level {}'.format(enemy.name, enemy.level))
                             
                             enemy.attack = attack
                             enemy.defense = defense
                             enemy.speed = speed
-                            # print('Set stats A:{} D:{} S:{}\n'.format(enemy.attack, enemy.defense, enemy.speed))
-                    
+                        
                             enemy_list.append(enemy)
                     except Exception as e:
-                        print(f"Error reading file {filepath}: {e}")
+                        self.message_log.append(f"Error reading enemy file {filepath}: {e}")
+                        print(f"Error reading enemy file {filepath}: {e}")
         
         return enemy_list
     
+    def clone_enemy(self, enemy_template: Entity) -> Entity:
+        """
+        Clones an enemy template to create a new, fresh instance for combat.
+        """
+        # Using deepcopy is a clean way to ensure all attributes, including nested ones, are copied.
+        cloned_enemy = copy.deepcopy(enemy_template)
+        cloned_enemy.reset_health() # Ensure cloned entity starts with full health
+        
+        # No message appended here; the World.generate_enemy method will announce the enemy's appearance.
+        return cloned_enemy
+
     def build_items(self):
         item_list = []
         for dirpath, _, filenames in os.walk(ITEM_PATH):
             for filename in filenames:
-                # print('Attempting to walk through {}'.format(filename))
                 if filename.endswith(".txt"):
                     filepath = os.path.join(dirpath, filename)
                     try:
                         with open(filepath, "r") as file:
-                            name = filename
-                            type = 'None'
+                            name = os.path.splitext(filename)[0] # Get name without .txt
+                            item_type = 'None' # Renamed from 'type' to avoid conflict with built-in type()
                             description = []
                             stat_modifiers = {}
                             location = []
                             worth = 0
                             for i, line in enumerate(file):
                                 if i == 0:
-                                    type_line = line.strip()
-                                    # print('Setting {} type to {}'.format(name, type_line))
-                                    type = type_line
-
+                                    item_type = line.strip()
                                 elif i == 1:
                                     stat_line = line.strip()
-                                    # print('Setting stat modifiers as {}'.format(stat_line))
-
-                                    if type in ['weapon', 'armor', 'crafting', 'trinket']:
+                                    if item_type in ['weapon', 'armor', 'crafting', 'trinket']:
                                         stat_modifiers = eval(stat_line)
-                                    
-                                    elif type == 'wealth':
+                                    elif item_type == 'wealth':
                                         worth = int(stat_line)
-
                                 elif i == 2:
                                     location_line = line.strip()
                                     check = eval(location_line)
@@ -186,33 +161,24 @@ class Builder():
                                         location = ['global']
                                     else:
                                         location = check
-                                    # print('Setting the drop locations as {}'.format(location))
                                 else:
                                     description.append(line.strip())
-                                    # print('Setting {} description'.format(name))
                             
-                        item = Item()
-                        item.name = name
-                        item.type = type
-                        # print('Built item {} type {}'.format(item.name, item.type))
+                            item = Item()
+                            item.name = name
+                            item.type = item_type
+                            item.description = description
+                            item.spawn_location = location
+                            
+                            if item_type == 'wealth':
+                                item.worth = worth
+                            else:
+                                item.stat_modifiers = stat_modifiers
+                            
+                            item_list.append(item)
                         
-                        item.description = description
-                        # print('Set description as {}'.format(item.description))
-
-                        item.spawn_location = location
-                        # print('Added to {}'.format(item.spawn_location))
-                        
-                        if type == 'wealth':
-                            item.worth = worth
-                            # print('Set worth {}'.format(item.worth))
-                        else:
-                            item.stat_modifiers = stat_modifiers
-                            # print('Set stat modifiers {}'.format(item.stat_modifiers))
-                        
-                        item_list.append(item)
-                        # print('Item successfully appended to the item list!\n')
-                    
                     except Exception as e:
-                        print(f"Error reading file {filepath}: {e}\n")
+                        self.message_log.append(f"Error reading item file {filepath}: {e}")
+                        print(f"Error reading item file {filepath}: {e}\n")
         
         return item_list

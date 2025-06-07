@@ -1,4 +1,0 @@
-wealth
-15
-['Magma veins']
-A small, jagged shard of dark, volcanic rock that is perpetually warm to the touch and glows with a faint, internal ember, even when removed from the mountain's core.

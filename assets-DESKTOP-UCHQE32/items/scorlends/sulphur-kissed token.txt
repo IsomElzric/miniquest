@@ -1,5 +1,0 @@
-trinket
-{'attack': 1, 'defense': 1, 'speed': 0}
-['Sulphur wastes']
-A small piece of hardened, mineralized bone or rock, stained yellow and red by sulfur
-It carries a faint, acrid scent but feels oddly resilient.

@@ -1,5 +1,0 @@
-crafting
-{'damage': 1, 'mitigation': 1, 'finesse': 0}
-['Weeping garden']
-A sickly, bioluminescent flower that thrives in the heavily corrupted, damp soil of the gardens
-It glows with an eerie, green light and smells sweet and cloying.

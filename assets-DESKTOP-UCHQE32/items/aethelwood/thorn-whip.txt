@@ -1,5 +1,0 @@
-weapon
-{'damage': 4, 'mitigation': 6, 'finesse': 2}
-['Grove of hungering vines']
-A surprisingly flexible, segmented "whip" made from impossibly strong, dark thorny vines. 
-It feels unnervingly alive in your hand.
