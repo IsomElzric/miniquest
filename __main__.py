@@ -486,20 +486,6 @@ class GameView(arcade.View):
             width=int(GAME_AREA_WIDTH - 2 * LEFT_PADDING),
             align="left"
         )
-        # Combat Stats (Attack, Defense, Speed)
-        # self.player.update_stats() # Ensure stats are fresh
-
-        # arcade.draw_text(
-        #     f"Atk: {self.player.attack + self.player.attack_mod} | Def: {self.player.defense + self.player.defense_mod} | Spd: {self.player.speed + self.player.speed_mod}",
-        #     LEFT_PADDING,
-        #     player_info_y - 50,
-        #     text_color,
-        #     font_size=font_size,
-        #     anchor_x="left",
-        #     anchor_y="center",
-        #     width=int(GAME_AREA_WIDTH - 2 * LEFT_PADDING),
-        #     align="left"
-        # )
 
         # Income / Wealth
         arcade.draw_text(
@@ -661,18 +647,6 @@ class GameView(arcade.View):
                             anchor_x="left",
                             anchor_y="top"
                         )
-
-            # Add a prompt to return to area description if in combat log mode
-            arcade.draw_text(
-                "Click outside menu to continue...",
-                GAME_AREA_WIDTH / 2,
-                game_area_y_center - (SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT) / 2 + 10, # Position at bottom of game area
-                arcade.color.YELLOW,
-                font_size=10, # Removed this prompt as it's no longer applicable with turn-based combat
-                anchor_x="center",
-                anchor_y="bottom"
-            )
-
 
         # --- Draw Right-Hand Menu ---
         if self.right_panel_background_texture:
