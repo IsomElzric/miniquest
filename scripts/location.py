@@ -21,9 +21,9 @@ class Location():
 
     @description.setter
     def description(self, value):
-        for i in value:
-            self._description += i + '\n'
-
+        # Join all lines from the file into a single string, separated by spaces.
+        # textwrap in __main__.py will handle all visual line breaking.
+        self._description = " ".join(line for line in value if line.strip())
     def build_connection(self, area):
         # print('Adding connection {}'.format(area))
         if area not in self.connections:

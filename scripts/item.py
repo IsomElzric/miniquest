@@ -39,12 +39,9 @@ class Item(ABC):
 
     @description.setter
     def description(self, value):
-        for i in value:
-            if i != '':
-                self._description += i + '\n'
-            else:
-                value.remove(i)
-
+        # Join all lines from the file into a single string, separated by spaces.
+        # Filter out empty strings to avoid excessive spacing.
+        self._description = " ".join(line for line in value if line.strip())
     @property
     def type(self):
         return self._type

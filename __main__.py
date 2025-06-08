@@ -1,10 +1,11 @@
 import logging
 import arcade.color
 from scripts.world import World
-from scripts.builder import Builder # Builder is imported but not directly used in __main__.py, might be a remnant
+# Builder import removed as it's not directly used in __main__.py
 import arcade
 import os
 import sys
+import textwrap # For wrapping text into lines
 
 logging.getLogger('arcade').setLevel(logging.INFO)
 
@@ -24,18 +25,35 @@ BUTTON_HOVER_COLOR = arcade.color.BLUE
 BUTTON_TEXT_COLOR = arcade.color.WHITE
 BUTTON_FONT_SIZE = 18
 
-# Background image filepath for the main menu
-BACKGROUND_IMAGE = "miniquest/assets/art/background_title.jpg"
-
 # --- Game View Constants ---
 PLAYER_INFO_BANNER_HEIGHT = 80 # Height for the top player info banner
 TOP_PADDING = 20 # Padding from the top of the screen for text
 LEFT_PADDING = 10 # Padding from the left of the main game area for text
 RIGHT_MENU_X_START = GAME_AREA_WIDTH # X-coordinate where the right menu begins
 
+# Determine the absolute path to the 'miniquest' package directory (where __main__.py resides)
+PACKAGE_ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+ASSETS_DIR = os.path.join(PACKAGE_ROOT_DIR, 'assets')
+
 # New: Placeholder art for locations without specific images
-PLACEHOLDER_ART = "miniquest/assets/art/placeholder.jpg" # Make sure this file exists!
-ART_PATH = "miniquest/assets/art/"
+BACKGROUND_IMAGE = os.path.join(ASSETS_DIR, "art", "background_title.jpg")
+PLACEHOLDER_ART = os.path.join(ASSETS_DIR, "art", "placeholder.jpg") # Make sure this file exists!
+ART_PATH = os.path.join(ASSETS_DIR, "art") # This is a directory path
+
+# New constants for scrollable text areas
+TEXT_AREA_LINE_HEIGHT = 18  # Pixel height for each line of text, including some padding
+TEXT_AREA_FONT_SIZE = 12    # Font size for area descriptions
+LOG_AREA_FONT_SIZE = 12       # Font size for combat/event logs
+
+# New constants for menu buttons with images
+MENU_BUTTON_IMAGE_PATH = os.path.join(ASSETS_DIR, "art", "menu_button.png") # <-- REPLACE WITH YOUR BUTTON IMAGE PATH
+MENU_BUTTON_TARGET_WIDTH = MENU_PANEL_WIDTH - 30 # Target width: Panel width minus 15px padding on each side
+MENU_BUTTON_HEIGHT = 40 # Further reduced height to make them less "dramatic"
+MENU_BUTTON_TEXT_COLOR = arcade.color.WHITE
+MENU_BUTTON_VERTICAL_SPACING = 8 # Significantly increased space between buttons
+MENU_BUTTON_TEXT_PADDING = 10 # Padding for text inside the button (e.g., 5px on each side for centering)
+MENU_ACTIONS_TITLE_FONT_SIZE = 24 # Font size of the "Actions" title
+MENU_PADDING_BELOW_TITLE = 15 # Padding between the "Actions" title and the first button
 
 
 class MenuView(arcade.View):
@@ -45,30 +63,47 @@ class MenuView(arcade.View):
     def __init__(self):
         super().__init__()
         # Load background image
+        self.background_texture = None # Initialize
         try:
             self.background_texture = arcade.load_texture(BACKGROUND_IMAGE)
         except FileNotFoundError:
             print(f"Error: Background image '{BACKGROUND_IMAGE}' not found.")
             print("Please make sure the image file is in the correct path or update the 'BACKGROUND_IMAGE' constant.")
-            self.background_texture = None
 
-        # Initialize button sprites
-        self.new_game_button = arcade.SpriteSolidColor(BUTTON_WIDTH, BUTTON_HEIGHT, BUTTON_COLOR_TRANSLUCENT)
-        self.load_game_button = arcade.SpriteSolidColor(BUTTON_WIDTH, BUTTON_HEIGHT, BUTTON_COLOR_TRANSLUCENT)
-        self.quit_button = arcade.SpriteSolidColor(BUTTON_WIDTH, BUTTON_HEIGHT, BUTTON_COLOR_TRANSLUCENT)
+        # Load menu button texture (consistent with GameView)
+        self.menu_button_texture = None # Initialize
+        try:
+            self.menu_button_texture = arcade.load_texture(MENU_BUTTON_IMAGE_PATH)
+        except FileNotFoundError:
+            print(f"ERROR: Menu button image not found at {MENU_BUTTON_IMAGE_PATH} for MenuView")
+        
+        self.menu_buttons = arcade.SpriteList()
+        self._create_menu_buttons()
 
-        # Position buttons horizontally at the bottom
-        total_button_width = (BUTTON_WIDTH * 3) + (2 * 20)
-        start_x = (SCREEN_WIDTH - total_button_width) / 2 + BUTTON_WIDTH / 2
+    def _create_menu_buttons(self):
+        """Creates the New Game, Load Game, and Quit buttons."""
+        self.menu_buttons.clear()
+        button_texts = ["New Game", "Load Game", "Quit"]
+        
+        menu_content_area_top_y = SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT
+        title_area_height = MENU_ACTIONS_TITLE_FONT_SIZE + MENU_PADDING_BELOW_TITLE # Approx height for a title if we had one
+        
+        # Start buttons lower in the MenuView, perhaps centered vertically in the panel
+        available_button_height = SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT - (2 * TOP_PADDING) # Total height for buttons
+        total_buttons_height = len(button_texts) * MENU_BUTTON_HEIGHT + (len(button_texts) -1) * MENU_BUTTON_VERTICAL_SPACING
+        first_button_center_y = menu_content_area_top_y - TOP_PADDING - (available_button_height - total_buttons_height) / 2 - MENU_BUTTON_HEIGHT / 2
 
-        self.new_game_button.center_x = start_x
-        self.new_game_button.center_y = 50
+        button_center_x = RIGHT_MENU_X_START + MENU_PANEL_WIDTH / 2
 
-        self.load_game_button.center_x = start_x + BUTTON_WIDTH + 20
-        self.load_game_button.center_y = 50
-
-        self.quit_button.center_x = start_x + (BUTTON_WIDTH * 2) + (2 * 20)
-        self.quit_button.center_y = 50
+        for i, text in enumerate(button_texts):
+            button_sprite = arcade.Sprite(texture=self.menu_button_texture) if self.menu_button_texture else arcade.SpriteSolidColor(MENU_BUTTON_TARGET_WIDTH, MENU_BUTTON_HEIGHT, arcade.color.DARK_SLATE_BLUE)
+            button_sprite.width = MENU_BUTTON_TARGET_WIDTH
+            button_sprite.height = MENU_BUTTON_HEIGHT
+            button_sprite.center_x = button_center_x
+            button_sprite.center_y = first_button_center_y - i * (MENU_BUTTON_HEIGHT + MENU_BUTTON_VERTICAL_SPACING)
+            button_sprite.properties['text'] = text
+            button_sprite.properties['action'] = text.lower().replace(" ", "_") # e.g., "new_game"
+            self.menu_buttons.append(button_sprite)
 
     def on_show_view(self):
         arcade.set_background_color(arcade.color.BLACK)
@@ -76,75 +111,106 @@ class MenuView(arcade.View):
     def on_draw(self):
         self.clear()
         if self.background_texture:
+            # Draw background image in the left "game art" panel
             arcade.draw_texture_rectangle(
-                SCREEN_WIDTH / 2,
-                SCREEN_HEIGHT / 2,
-                SCREEN_WIDTH,
-                SCREEN_HEIGHT,
+                GAME_AREA_WIDTH / 2,
+                (SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT) / 2, # Center below banner
+                GAME_AREA_WIDTH,
+                SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT,      # Full height below banner
                 self.background_texture,
             )
+        else: # Fallback if no background
+            arcade.draw_rectangle_filled(
+                GAME_AREA_WIDTH / 2,
+                (SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT) / 2,
+                GAME_AREA_WIDTH,
+                SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT,
+                arcade.color.DARK_GRAY
+            )
 
+        # --- Draw Top Banner (like GameView) ---
+        arcade.draw_rectangle_filled(
+            SCREEN_WIDTH / 2,
+            SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT / 2,
+            SCREEN_WIDTH,
+            PLAYER_INFO_BANNER_HEIGHT,
+            arcade.color.DARK_SLATE_GRAY # Or a color of your choice
+        )
         arcade.draw_text(
             "Miniquest",
             SCREEN_WIDTH / 2,
-            SCREEN_HEIGHT - 100,
+            SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT / 2, # Centered in banner
             arcade.color.WHITE,
             font_size=50,
             anchor_x="center",
             anchor_y="center",
         )
 
-        self.new_game_button.draw()
-        self.load_game_button.draw()
-        self.quit_button.draw()
+        # --- Draw Right-Hand Menu Panel ---
+        arcade.draw_rectangle_filled(
+            RIGHT_MENU_X_START + MENU_PANEL_WIDTH / 2,
+            (SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT) / 2, # Centered vertically below banner
+            MENU_PANEL_WIDTH,
+            SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT,
+            arcade.color.DARK_SLATE_GRAY # Match GameView's menu panel
+        )
 
-        arcade.draw_text(
-            "New Game", self.new_game_button.center_x, self.new_game_button.center_y,
-            BUTTON_TEXT_COLOR, font_size=BUTTON_FONT_SIZE, anchor_x="center", anchor_y="center",
-        )
-        arcade.draw_text(
-            "Load Game", self.load_game_button.center_x, self.load_game_button.center_y,
-            BUTTON_TEXT_COLOR, font_size=BUTTON_FONT_SIZE, anchor_x="center", anchor_y="center",
-        )
-        arcade.draw_text(
-            "Quit", self.quit_button.center_x, self.quit_button.center_y,
-            BUTTON_TEXT_COLOR, font_size=BUTTON_FONT_SIZE, anchor_x="center", anchor_y="center",
-        )
+        # Draw menu buttons and their text
+        self.menu_buttons.draw()
+
+        menu_item_font_size_default = 16 # Same as GameView
+        min_font_size = 6 # Same as GameView
+
+        for button_sprite in self.menu_buttons:
+            display_text = button_sprite.properties.get('text', "")
+            current_font_size = menu_item_font_size_default
+            button_text_max_width = button_sprite.width - (2 * MENU_BUTTON_TEXT_PADDING)
+
+            temp_text_obj = arcade.Text(display_text, 0, 0, MENU_BUTTON_TEXT_COLOR, font_size=current_font_size)
+            text_width = temp_text_obj.content_width
+            
+            while text_width > button_text_max_width and current_font_size > min_font_size:
+                current_font_size -= 1
+                temp_text_obj = arcade.Text(display_text, 0, 0, MENU_BUTTON_TEXT_COLOR, font_size=current_font_size)
+                text_width = temp_text_obj.content_width
+
+            arcade.draw_text(
+                display_text,
+                button_sprite.center_x,
+                button_sprite.center_y,
+                MENU_BUTTON_TEXT_COLOR,
+                font_size=current_font_size,
+                anchor_x="center",
+                anchor_y="center",
+                width=int(button_text_max_width)
+            )
 
     def on_mouse_press(self, x: float, y: float, button: int, modifiers: int):
-        if self.new_game_button.collides_with_point((x, y)):
-            print("--- New Game button pressed! ---")
-            game_world = World()
-            game_world.create_character() # This will populate the log with creation messages
-            game_view = GameView(game_world)
-            self.window.show_view(game_view)
-        elif self.load_game_button.collides_with_point((x, y)):
-            print("--- Load Game button pressed! ---")
-            # For now, this is identical to New Game.
-            # In a real game, you'd load state from a file here.
-            game_world = World()
-            game_world.create_character() # Temp: still creates character for testing
-            game_view = GameView(game_world)
-            self.window.show_view(game_view)
-        elif self.quit_button.collides_with_point((x, y)):
-            print("--- Quit button pressed! Exiting game. ---")
-            arcade.exit()
+        clicked_buttons = arcade.get_sprites_at_point((x,y), self.menu_buttons)
+        if clicked_buttons:
+            action = clicked_buttons[0].properties.get('action')
+            if action == "new_game":
+                print("--- New Game button pressed! ---")
+                game_world = World()
+                game_world.create_character() 
+                game_view = GameView(game_world)
+                self.window.show_view(game_view)
+            elif action == "load_game":
+                print("--- Load Game button pressed! (Not implemented) ---")
+                # Placeholder: For now, acts like New Game
+                game_world = World()
+                game_world.create_character()
+                game_view = GameView(game_world)
+                self.window.show_view(game_view)
+            elif action == "quit":
+                print("--- Quit button pressed! Exiting game. ---")
+                arcade.exit()
 
     def on_mouse_motion(self, x: float, y: float, dx: float, dy: float):
-        if self.new_game_button.collides_with_point((x, y)):
-            self.new_game_button.color = BUTTON_HOVER_COLOR
-        else:
-            self.new_game_button.color = BUTTON_COLOR_TRANSLUCENT
-
-        if self.load_game_button.collides_with_point((x, y)):
-            self.load_game_button.color = BUTTON_HOVER_COLOR
-        else:
-            self.load_game_button.color = BUTTON_COLOR_TRANSLUCENT
-
-        if self.quit_button.collides_with_point((x, y)):
-            self.quit_button.color = BUTTON_HOVER_COLOR
-        else:
-            self.quit_button.color = BUTTON_COLOR_TRANSLUCENT
+        # Optional: Add hover effect for the new sprite buttons if desired
+        # This would involve checking collision and changing texture or drawing an overlay.
+        # For simplicity, hover effect is omitted here but can be added similarly to GameView's buttons.
+        pass
 
 
 class GameView(arcade.View):
@@ -170,6 +236,18 @@ class GameView(arcade.View):
         self.display_mode = "area_description" # Can be "area_description", "combat_log", "inventory", etc.
         self.log_messages_to_display = [] # List to hold messages retrieved from world.message_log
 
+        # For scrollable text
+        self.scroll_offset_y = 0.0  # How many pixels the text content has been scrolled up
+        self.current_scrollable_lines = [] # Stores the pre-wrapped lines for the current view
+        self.scrollable_text_rect_on_screen = None # To store screen coords of the text box for scroll detection
+
+        # For menu buttons with images
+        try:
+            self.menu_button_texture = arcade.load_texture(MENU_BUTTON_IMAGE_PATH)
+        except FileNotFoundError:
+            print(f"ERROR: Menu button image not found at {MENU_BUTTON_IMAGE_PATH}")
+            self.menu_button_texture = None # Fallback if image is missing
+        self.menu_action_buttons = arcade.SpriteList()
 
     def load_placeholder_texture(self):
         """ Loads the generic placeholder texture once. """
@@ -183,8 +261,7 @@ class GameView(arcade.View):
     def load_current_area_art(self):
         """ Loads the art for the current area, with fallback to placeholder. """
         art_file_name = self.world.current_area.name.lower().replace(' ', '_') + ".jpg"
-        # FIX: Access ART_PATH from the world instance
-        art_path = f"{ART_PATH}{art_file_name}"
+        art_path = os.path.join(ART_PATH, art_file_name) # Use os.path.join for robust path construction
         try:
             self.game_area_background = arcade.load_texture(art_path)
         except FileNotFoundError:
@@ -197,25 +274,107 @@ class GameView(arcade.View):
 
     def update_menu_options(self, menu_type="main"):
         # We need to refresh the current area data to get accurate connections after travel
-        self.world.display_current_area() # This refreshes description in world.current_area and populates message_log
-        
+        # self.world.display_current_area() # This is now handled more explicitly when actions resolve
+
+        self.menu_action_buttons.clear() # Clear old buttons
+
         if menu_type == "main":
             options_text = ["1. Fight", "2. Travel", "3. Rest"]
             if self.world.current_area.name == self.world.camp:
-                options_text[0] = "1. Prepare"
+                options_text[0] = "1. Prepare" # Replace "Fight" with "Prepare" at camp
             self.current_menu_options = options_text
         elif menu_type == "travel":
             connections = self.world.current_area.get_connections()
             options_text = [f"{i+1}. {conn}" for i, conn in enumerate(connections)]
             options_text.append(f"{len(connections) + 1}. Stay") # Option to stay in current area during travel prompt
             self.current_menu_options = options_text
+        
+        # Create button sprites
+        # Calculate the Y position for the top of the menu content area (below player banner)
+        menu_content_area_top_y = SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT
+        # Y position for the "Actions" title (anchored top)
+        actions_title_y = menu_content_area_top_y - TOP_PADDING
+        # Calculate where the first button's center should be
+        first_button_center_y = actions_title_y - MENU_ACTIONS_TITLE_FONT_SIZE - MENU_PADDING_BELOW_TITLE - (MENU_BUTTON_HEIGHT / 2)
+        button_center_x = RIGHT_MENU_X_START + MENU_PANEL_WIDTH / 2
+        for i, raw_option_text in enumerate(self.current_menu_options):
+            display_text = raw_option_text
+            action_command = raw_option_text # Default action command
+            if ". " in raw_option_text:
+                try:
+                    prefix = raw_option_text.split(". ", 1)[0]
+                    int(prefix) 
+                    display_text = raw_option_text.split(". ", 1)[1]
+                    action_command = display_text # Use the stripped text for command if numbered
+                except ValueError:
+                    pass 
 
+            if self.menu_button_texture:
+                button_sprite = arcade.Sprite(texture=self.menu_button_texture)
+                # Directly set the target width and height. Arcade will adjust scale.
+                button_sprite.width = MENU_BUTTON_TARGET_WIDTH
+                button_sprite.height = MENU_BUTTON_HEIGHT
+            else:
+                # Fallback to a solid color sprite with the target dimensions
+                button_sprite = arcade.SpriteSolidColor(MENU_BUTTON_TARGET_WIDTH, MENU_BUTTON_HEIGHT, arcade.color.DARK_SLATE_BLUE)
+            
+            button_sprite.center_x = button_center_x
+            button_sprite.center_y = first_button_center_y - i * (MENU_BUTTON_HEIGHT + MENU_BUTTON_VERTICAL_SPACING)
+            button_sprite.properties['display_text'] = display_text
+            button_sprite.properties['action_command'] = action_command # Store the command for click handling
+            self.menu_action_buttons.append(button_sprite)
+
+    def _prepare_scrollable_text(self, full_text_content, font_size_for_metric, area_width_pixels):
+        """
+        Prepares full_text_content into self.current_scrollable_lines,
+        wrapped to fit area_width_pixels.
+        """
+        self.current_scrollable_lines.clear()
+        self.scroll_offset_y = 0.0  # Reset scroll when content changes
+
+        if not full_text_content:
+            return
+
+        # Estimate characters per line for textwrap. This is an approximation.
+        # Using a slightly larger factor (e.g., 0.60 to 0.65) makes textwrap more conservative.
+        avg_char_width = font_size_for_metric * 0.65 # Increased factor
+        if avg_char_width <= 0:
+            approx_chars_per_line = 80 # Default fallback
+        else:
+            approx_chars_per_line = int(area_width_pixels / avg_char_width)
+        
+        if approx_chars_per_line <= 0: # Ensure positive width for textwrap
+            approx_chars_per_line = 1
+
+        paragraphs = full_text_content.split('\n')
+        wrapped_lines = []
+        for paragraph in paragraphs:
+            if not paragraph.strip() and paragraph != "": # Preserve lines that are empty
+                wrapped_lines.append("") # Add an empty line
+            elif not paragraph.strip() and paragraph == "": # Preserve lines that are empty
+                 wrapped_lines.append("")
+            else:
+                wrapped_lines.extend(textwrap.wrap(paragraph, width=approx_chars_per_line, 
+                                                   replace_whitespace=False, drop_whitespace=False,
+                                                   break_long_words=True, break_on_hyphens=True))
+        self.current_scrollable_lines = wrapped_lines
+
+    def _prepare_scrollable_text_for_current_mode(self):
+        # Calculate the consistent, buffered width for the text area
+        # This must match the 'description_width' used in on_draw's rendering logic
+        consistent_text_area_width = GAME_AREA_WIDTH - (2 * LEFT_PADDING) - 5 # Buffer of 5 pixels
+
+        if self.display_mode == "area_description":
+            self._prepare_scrollable_text(self.world.current_area.description, TEXT_AREA_FONT_SIZE, consistent_text_area_width)
+        elif self.display_mode == "combat_log":
+            self._prepare_scrollable_text("\n".join(self.log_messages_to_display), LOG_AREA_FONT_SIZE, consistent_text_area_width)
 
     def on_show_view(self):
         arcade.set_background_color(arcade.color.GRAY)
         # When GameView is shown, update options and load initial messages
         self.update_menu_options("main") # Set initial main menu options
         self.log_messages_to_display = self.world.get_messages() # Get welcome and character creation messages
+        self._prepare_scrollable_text_for_current_mode() # Prepare initial text
 
     def on_draw(self):
         self.clear()
@@ -314,56 +473,129 @@ class GameView(arcade.View):
         # Overlay text description for the current area OR combat log
         description_x = LEFT_PADDING
         description_y = game_area_y_center + (SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT) / 2 - TOP_PADDING
-        description_width = GAME_AREA_WIDTH - 2 * LEFT_PADDING
-        
+        # Original: description_width = GAME_AREA_WIDTH - 2 * LEFT_PADDING
+        description_width = GAME_AREA_WIDTH - (2 * LEFT_PADDING) - 5 # Add a small buffer (e.g., 5 pixels)
         text_bg_height = 150 # Adjust based on content. For log, it might need to be taller.
+        
+        # Calculate the actual height and center Y for the background rectangle
+        # to ensure it covers text that might draw slightly below the nominal text_bg_height
+        effective_background_height = text_bg_height + (2 * TEXT_AREA_LINE_HEIGHT) # Extend by two line heights
+        effective_background_center_y = description_y - (effective_background_height / 2)
+
         # Draw a semi-transparent background for the text overlay
         arcade.draw_rectangle_filled(
             GAME_AREA_WIDTH / 2,
-            description_y - text_bg_height / 2,
+            effective_background_center_y, # Use new center_y
             description_width + 20,
-            text_bg_height,
+            effective_background_height, # Use new height
             (0, 0, 0, 180) # Slightly more opaque for readability
-        )
+        )       
 
         # NEW: Conditional rendering based on display_mode
         if self.display_mode == "area_description":
+            # --- Location Name ---
+            location_name_text = f"Location: {self.world.current_area.name}"
+            
+            # Define font sizes for clarity
+            name_font_size = 14 # Stays as is, not part of scrollable TEXT_AREA_FONT_SIZE
+            # description_font_size is now TEXT_AREA_FONT_SIZE
+            # Space between the bottom of the name and top of the description
+            spacing_after_name = 5 
+
             arcade.draw_text(
-                f"Location: {self.world.current_area.name}\n\n{self.world.current_area.description}",
+                location_name_text,
                 description_x,
-                description_y,
+                description_y, # Anchored to the top of the text box
                 arcade.color.LIGHT_GRAY,
-                font_size=12,
+                font_size=name_font_size,
                 width=description_width,
                 align="left",
                 anchor_x="left",
-                anchor_y="top"
+                anchor_y="top",
+                bold=True # Make the location name stand out
             )
-        elif self.display_mode == "combat_log":
-            # Display messages from the log_messages_to_display list
-            # We'll display them from bottom up for readability
-            log_display_start_y = description_y - 20 # Start slightly below the top of the text box
-            line_height = 16 # Approx font size + spacing
-            max_lines = int(text_bg_height / line_height) # Max lines that fit in the box
 
-            # Display the most recent messages first, to ensure they are visible
-            messages_to_render = self.log_messages_to_display[-max_lines:]
+            # --- Scrollable Location Description ---
+            description_start_y = description_y - (name_font_size + spacing_after_name)
+            scroll_area_top_y = description_start_y
+            scroll_area_left_x = description_x
+            scroll_area_width_val = description_width
+            scroll_area_height_val = text_bg_height - (name_font_size + spacing_after_name)
             
-            # Iterate through messages and draw them
-            # Draw from bottom up to keep newest at the visual bottom of the log box
-            for i, message in enumerate(reversed(messages_to_render)): 
-                arcade.draw_text(
-                    message,
-                    description_x,
-                    # Adjust y to draw from the bottom of the log box upwards
-                    description_y - text_bg_height + (len(messages_to_render) - 1 - i) * line_height + 5, 
-                    arcade.color.WHITE, # Use white for log messages
-                    font_size=12,
-                    width=description_width,
-                    align="left",
-                    anchor_x="left",
-                    anchor_y="bottom" # Anchor to bottom for proper stacking
-                )
+            self.scrollable_text_rect_on_screen = (
+                scroll_area_left_x, scroll_area_top_y - scroll_area_height_val, # x, bottom_y
+                scroll_area_width_val, scroll_area_height_val # width, height
+            )
+            # arcade.draw_lrbt_rectangle_outline(*self.scrollable_text_rect_on_screen, arcade.color.RED, 1) # Debug
+
+            if self.current_scrollable_lines:
+                first_visible_line_idx = int(self.scroll_offset_y / TEXT_AREA_LINE_HEIGHT)
+                lines_in_view = int(scroll_area_height_val / TEXT_AREA_LINE_HEIGHT)
+
+                for i in range(len(self.current_scrollable_lines)):
+                    if i < first_visible_line_idx:
+                        continue
+                    if i > first_visible_line_idx + lines_in_view + 1: # +1 for partially visible line
+                        break
+                    
+                    line_text_content = self.current_scrollable_lines[i]
+                    line_y_offset_from_content_top = i * TEXT_AREA_LINE_HEIGHT
+                    draw_y_on_screen = scroll_area_top_y - (line_y_offset_from_content_top - self.scroll_offset_y)
+
+                    # Basic clipping: only draw if the line's top is within drawable vertical space
+                    if draw_y_on_screen <= scroll_area_top_y and \
+                       draw_y_on_screen >= scroll_area_top_y - scroll_area_height_val - TEXT_AREA_LINE_HEIGHT:
+                        arcade.draw_text(
+                            line_text_content,
+                            scroll_area_left_x,
+                            draw_y_on_screen,
+                            arcade.color.LIGHT_GRAY,
+                            font_size=TEXT_AREA_FONT_SIZE,
+                            width=scroll_area_width_val,
+                            anchor_x="left",
+                            anchor_y="top"
+                        )
+
+        elif self.display_mode == "combat_log":
+            # --- Scrollable Combat Log ---
+            scroll_area_top_y = description_y # Log uses the full text_bg_height
+            scroll_area_left_x = description_x
+            scroll_area_width_val = description_width
+            scroll_area_height_val = text_bg_height
+
+            self.scrollable_text_rect_on_screen = (
+                scroll_area_left_x, scroll_area_top_y - scroll_area_height_val,
+                scroll_area_width_val, scroll_area_height_val
+            )
+            # arcade.draw_lrbt_rectangle_outline(*self.scrollable_text_rect_on_screen, arcade.color.CYAN, 1) # Debug
+
+            if self.current_scrollable_lines:
+                first_visible_line_idx = int(self.scroll_offset_y / TEXT_AREA_LINE_HEIGHT)
+                lines_in_view = int(scroll_area_height_val / TEXT_AREA_LINE_HEIGHT)
+
+                for i in range(len(self.current_scrollable_lines)):
+                    if i < first_visible_line_idx:
+                        continue
+                    if i > first_visible_line_idx + lines_in_view + 1:
+                        break
+                    
+                    line_text_content = self.current_scrollable_lines[i]
+                    line_y_offset_from_content_top = i * TEXT_AREA_LINE_HEIGHT
+                    draw_y_on_screen = scroll_area_top_y - (line_y_offset_from_content_top - self.scroll_offset_y)
+
+                    if draw_y_on_screen <= scroll_area_top_y and \
+                       draw_y_on_screen >= scroll_area_top_y - scroll_area_height_val - TEXT_AREA_LINE_HEIGHT:
+                        arcade.draw_text(
+                            line_text_content,
+                            scroll_area_left_x,
+                            draw_y_on_screen,
+                            arcade.color.WHITE,
+                            font_size=LOG_AREA_FONT_SIZE,
+                            width=scroll_area_width_val,
+                            anchor_x="left",
+                            anchor_y="top"
+                        )
+
             # Add a prompt to return to area description if in combat log mode
             arcade.draw_text(
                 "Click outside menu to continue...",
@@ -396,17 +628,47 @@ class GameView(arcade.View):
             anchor_y="top"
         )
 
-        # Draw menu options
-        menu_start_y = SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT - TOP_PADDING - 40
-        for i, option_text in enumerate(self.current_menu_options):
+        # Draw menu buttons and their text
+        self.menu_action_buttons.draw()
+
+        menu_item_font_size_default = 16
+        min_font_size = 6 # Further reduced minimum font size
+
+        for button_sprite in self.menu_action_buttons:
+            display_text = button_sprite.properties.get('display_text', "")
+            current_font_size = menu_item_font_size_default
+            
+            # Max width for text on this button
+            button_text_max_width = button_sprite.width - (2 * MENU_BUTTON_TEXT_PADDING)
+            initial_font_size_for_button = current_font_size # For debugging
+            
+            # Measure text width using arcade.measure_text()
+            # Revert to using arcade.Text for measurement if arcade.measure_text is not available
+            temp_text_obj = arcade.Text(
+                display_text, 0, 0, # x, y not relevant for measurement
+                MENU_BUTTON_TEXT_COLOR,
+                font_size=current_font_size
+            )
+            text_width = temp_text_obj.content_width # Use content_width for more reliable measurement
+            
+            while text_width > button_text_max_width and current_font_size > min_font_size:
+                current_font_size -= 1
+                # Recalculate width with the new font size
+                temp_text_obj = arcade.Text(
+                    display_text, 0, 0, MENU_BUTTON_TEXT_COLOR,
+                    font_size=current_font_size
+                )
+                text_width = temp_text_obj.content_width # Use content_width here as well
+
             arcade.draw_text(
-                option_text,
-                RIGHT_MENU_X_START + 20,
-                menu_start_y - (i * 30),
-                arcade.color.LIGHT_YELLOW,
-                font_size=16,
-                anchor_x="left",
-                anchor_y="top"
+                display_text, # Use the processed text without numbers
+                button_sprite.center_x,
+                button_sprite.center_y,
+                MENU_BUTTON_TEXT_COLOR,
+                font_size=current_font_size, # Use dynamically adjusted font size
+                anchor_x="center", # Center text on the button
+                anchor_y="center", # Center text on the button
+                width=int(button_text_max_width) # Also provide width to draw_text for potential internal wrapping
             )
 
     def on_mouse_press(self, x: float, y: float, button: int, modifiers: int):
@@ -414,63 +676,54 @@ class GameView(arcade.View):
         
         # Check if click is within the right-hand menu area
         if x > RIGHT_MENU_X_START:
-            # Only process menu clicks if not in combat log review mode
-            if self.display_mode == "combat_log":
-                # If in combat log mode, a click on the menu *should* still activate the menu item.
-                # The "Click outside menu to continue" prompt is for clicking *outside* the menu.
-                pass # Continue to menu item processing below
-            
-            menu_start_y_clickable = SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT - TOP_PADDING - 40
-            for i, option_text in enumerate(self.current_menu_options):
-                option_top_y = menu_start_y_clickable - (i * 30)
-                option_bottom_y = option_top_y - 25 
+            # Check for clicks on the new button sprites
+            clicked_buttons = arcade.get_sprites_at_point((x, y), self.menu_action_buttons)
+            if clicked_buttons:
+                clicked_button = clicked_buttons[0] # Get the first button clicked (should only be one)
+                command = clicked_button.properties.get('action_command', "")
+                
+                print(f"Clicked button: {command}")
 
-                if (RIGHT_MENU_X_START + 20 < x < RIGHT_MENU_X_START + MENU_PANEL_WIDTH - 20 and
-                    option_bottom_y < y < option_top_y):
+                # Use world.handle_player_choice to manage state and get display mode
+                self.log_messages_to_display.clear() 
+                new_display_mode = self.world.handle_player_choice(command)
+                
+                # Update local state based on world's decision
+                if new_display_mode == "combat_log":
+                    self.display_mode = "combat_log"
+                    self.log_messages_to_display.extend(self.world.get_messages())
+                    self._prepare_scrollable_text_for_current_mode()
+                elif new_display_mode == "travel_options":
+                    self.update_menu_options("travel") # This will rebuild buttons for travel
+                    self.display_mode = "area_description" # Stay in description to show travel prompt
+                    self.log_messages_to_display.extend(self.world.get_messages()) 
+                    # Prepare scrollable text for the current area description
+                    self._prepare_scrollable_text_for_current_mode()
+                else: # "area_description" or other default
+                    self.display_mode = "area_description"
+                    self.update_menu_options("main") # Rebuild main action buttons
+                    self.load_current_area_art() # Reload art in case of travel
+                    self.log_messages_to_display.extend(self.world.get_messages()) # Get new messages
+                    self._prepare_scrollable_text_for_current_mode()
                     
-                    print(f"Clicked: {option_text}")
-                    
-                    # Extract the actual command/destination from option_text
-                    # This is the key change for travel
-                    command = option_text
-                    if ". " in option_text: # This handles numbered options like "1. Fight" or "2. Aethelwood"
-                        command = option_text.split(". ", 1)[1] # Get "Fight" or "Aethelwood"
+                # No need to explicitly call self.on_draw(), the game loop handles it.
+                return # Exit after processing a button click
 
-                    # Use world.handle_player_choice to manage state and get display mode
-                    self.log_messages_to_display.clear() 
-                    new_display_mode = self.world.handle_player_choice(command) # Pass the extracted command!
-                    
-                    # Update local state based on world's decision
-                    if new_display_mode == "combat_log":
-                        self.display_mode = "combat_log"
-                        self.log_messages_to_display.extend(self.world.get_messages())
-                    elif new_display_mode == "travel_options":
-                        self.update_menu_options("travel")
-                        self.display_mode = "area_description"
-                        self.log_messages_to_display.extend(self.world.get_messages()) 
-                    else: # "area_description" or other default
-                        self.display_mode = "area_description"
-                        # Ensure main menu options are set after any action that resolves
-                        self.update_menu_options("main") 
-                        self.load_current_area_art() # Reload art in case of travel
-                        self.log_messages_to_display.extend(self.world.get_messages()) # Get new messages
-                        
-                    # Always redraw after a menu action
-                    self.on_draw()
-                    break # Exit loop after first click detected
         else: # Click was outside the menu area (e.g., in the main game art area)
             if self.display_mode == "combat_log":
                 # If in combat log mode and clicked outside menu, switch back to area description
                 self.display_mode = "area_description"
                 self.log_messages_to_display.clear() # Clear old messages from log
                 self.world.get_messages() # Clear messages from world's log as well
-                self.on_draw() # Redraw to show area description
+                self._prepare_scrollable_text_for_current_mode()
+                # self.on_draw() # Redraw to show area description
             elif self.display_mode == "area_description" and any("Stay" in opt for opt in self.current_menu_options): # Check if current options are travel options (by looking for 'Stay')
                 # If we're in travel selection mode but clicked outside, assume "Stay"
                 self.world.handle_player_choice("Stay") # Explicitly call "Stay"
                 self.update_menu_options("main") # Revert to main menu
                 self.log_messages_to_display.extend(self.world.get_messages())
-                self.on_draw()
+                self._prepare_scrollable_text_for_current_mode()
+                # self.on_draw()
 
 
     def on_update(self, delta_time: float):
@@ -480,15 +733,36 @@ class GameView(arcade.View):
         if self.player.is_dead():
             # Ensure death messages are captured before exiting
             self.display_mode = "combat_log" 
-            # Force world to append death message if it hasn't already
-            if "has been defeated!" not in self.world.message_log: # Basic check to avoid re-adding
-                self.world.append_message(f"{self.player.name} has been defeated!")
+            # The world.fight() method should have already appended a defeat message.
             self.log_messages_to_display.extend(self.world.get_messages()) # Get the final death message
+            self._prepare_scrollable_text_for_current_mode()
             
             self.on_draw() # Draw one last frame with death message
             # For now, just exit. You'd implement a GameOverView later.
             print("Game Over!")
             arcade.exit()
+
+    def on_mouse_scroll(self, x: int, y: int, scroll_x: int, scroll_y: int):
+        """ Handle mouse scroll events for the text area. """
+        if self.scrollable_text_rect_on_screen:
+            s_rect_x, s_rect_bottom_y, s_rect_width, s_rect_height = self.scrollable_text_rect_on_screen
+            s_rect_top_y = s_rect_bottom_y + s_rect_height
+
+            # Check if mouse is over the scrollable text area
+            if s_rect_x <= x <= s_rect_x + s_rect_width and \
+               s_rect_bottom_y <= y <= s_rect_top_y:
+                
+                # scroll_y is +1 for wheel up (scroll content up), -1 for wheel down (scroll content down)
+                self.scroll_offset_y -= scroll_y * TEXT_AREA_LINE_HEIGHT * 2 # Multiply for faster scroll
+
+                # Clamp scroll_offset_y
+                total_content_height = len(self.current_scrollable_lines) * TEXT_AREA_LINE_HEIGHT
+                
+                max_scroll = max(0, total_content_height - s_rect_height)
+                if total_content_height <= s_rect_height: # If content fits, no scroll needed
+                    self.scroll_offset_y = 0
+                else:
+                    self.scroll_offset_y = arcade.clamp(self.scroll_offset_y, 0, max_scroll)
 
 
 def main():
@@ -510,38 +784,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-"""
-def main():
-    os.chdir('miniquest/')
-    world = World()
-    loop = True
-
-    while loop:
-        print('Miniquest')
-        print()
-        print('1. New Game')
-        print('2. Exit Game')
-        
-        i = input('Enter selection: ')
-        
-        if i == '1':  
-            loop = True
-            world.create_character()
-
-            while loop:
-                world.display_current_area()
-                loop = False
-
-        elif i == '2':
-            loop = False
-            sys.exit
-
-        else:
-            pass
-
-
-if __name__ == "__main__":
-    main()
-"""

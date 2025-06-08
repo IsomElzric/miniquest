@@ -32,7 +32,9 @@ def main():
 
     lines = [type, value, checked_l]
 
-    directory = "assets/items/{}/".format(area)
+    # Assuming build_item.py is at the project root (one level above 'miniquest' package),
+    # and assets are in miniquest/assets/items/
+    directory = "miniquest/assets/items/{}/".format(area)
     full_path = os.path.join(os.path.dirname(__file__), directory, name)
 
     with open(full_path, "w") as file:

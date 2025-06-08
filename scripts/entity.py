@@ -149,11 +149,11 @@ class Entity():
         defense = self.defense + self.defense_mod
         speed = self.speed + self.speed_mod
 
-        message_log.append(f'{self.name} level {self.level}: Health {self.current_health}/{self.max_health}, Attack {attack}, Defense {defense}, Speed {speed}')
+        message_log(f'{self.name} level {self.level}: Health {self.current_health}/{self.max_health}, Attack {attack}, Defense {defense}, Speed {speed}')
         if self.inventory.equipped_items['Held'] is not None:
-            message_log.append(f'You are currently wielding a {self.inventory.equipped_items["Held"].name} as your weapon.')
+            message_log(f'You are currently wielding a {self.inventory.equipped_items["Held"].name} as your weapon.')
         if self.inventory.equipped_items['Body'] is not None:
-            message_log.append(f'You are currently wearing {self.inventory.equipped_items["Body"].name} for armor.')
+            message_log(f'You are currently wearing {self.inventory.equipped_items["Body"].name} for armor.')
         
         if self.inventory.equipped_items['Trinkets']:
             formated_trinkets = ''
@@ -164,8 +164,8 @@ class Entity():
                     trinket = '{}, '.format(v.name)
                 formated_trinkets += trinket
                 
-            message_log.append(f'You are currently wearing {formated_trinkets} as your trinkets.')
-        message_log.append('') # Add an empty line for spacing in the log
+            message_log(f'You are currently wearing {formated_trinkets} as your trinkets.')
+        message_log('') # Add an empty line for spacing in the log
 
     def round_up(self, num):
         rouned = math.ceil(num)

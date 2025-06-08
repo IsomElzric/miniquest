@@ -6,10 +6,16 @@ from scripts.item import Item
 import copy # NEW: Import copy module for deep copying entities
 
 
-LOCATION_PATH = 'miniquest/assets/locations/'
-ENEMY_PATH = 'miniquest/assets/enemies/'
-ITEM_PATH = 'miniquestassets/items/'
+# Determine the absolute path to the 'miniquest' package directory
+# __file__ is '.../miniquest/scripts/builder.py'
+# os.path.dirname(__file__) is '.../miniquest/scripts'
+# os.path.dirname(os.path.dirname(__file__)) is '.../miniquest' (this is the package root)
+PACKAGE_ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ASSETS_DIR = os.path.join(PACKAGE_ROOT_DIR, 'assets')
 
+LOCATION_PATH = os.path.join(ASSETS_DIR, 'locations')
+ENEMY_PATH = os.path.join(ASSETS_DIR, 'enemies')
+ITEM_PATH = os.path.join(ASSETS_DIR, 'items')
 
 class Builder():
     def __init__(self, message_log) -> None: # Accept message_log here
@@ -69,7 +75,7 @@ class Builder():
 
                             area_list.append(location)
                     except Exception as e:
-                        self.message_log.append(f"Error reading location file {filepath}: {e}")
+                        self.message_log(f"Error reading location file {filepath}: {e}") # Changed from .append
                         # Keeping print for console debugging during development
                         print(f"Error reading location file {filepath}: {e}") 
 
@@ -102,7 +108,7 @@ class Builder():
                                     level_line = line.strip()
                                     level = int(level_line)
                                 else:
-                                    self.message_log.append(f'Warning: Unexpected line in enemy file {filename}')
+                                    self.message_log(f'Warning: Unexpected line in enemy file {filename}') # Changed from .append
                                     print(f'Warning: Unexpected line in enemy file {filename}')
                             
                             enemy = Entity()
@@ -115,7 +121,7 @@ class Builder():
                         
                             enemy_list.append(enemy)
                     except Exception as e:
-                        self.message_log.append(f"Error reading enemy file {filepath}: {e}")
+                        self.message_log(f"Error reading enemy file {filepath}: {e}") # Changed from .append
                         print(f"Error reading enemy file {filepath}: {e}")
         
         return enemy_list
@@ -178,7 +184,7 @@ class Builder():
                             item_list.append(item)
                         
                     except Exception as e:
-                        self.message_log.append(f"Error reading item file {filepath}: {e}")
+                        self.message_log(f"Error reading item file {filepath}: {e}") # Changed from .append
                         print(f"Error reading item file {filepath}: {e}\n")
         
         return item_list

@@ -69,6 +69,7 @@ class Loot():
     def check_inventory(self, player):
         pass
 
-    def add_item_to_inventory(self, player, item):
+    def add_item_to_inventory(self, player, item, message_log_func): # Accept message_log_func
         player.inventory.add_to_stored_items(item)
-        print('You have added a {} to your bag.\n'.format(item.name))
+        message_log_func(f'You have added a {item.name} to your bag.')
+        message_log_func('') # Add spacing

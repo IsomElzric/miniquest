@@ -28,24 +28,27 @@ class Inventory():
     def equip_item(self, value):
         # print('Attempting to equip {} type {}'.format(value.name, value.type))
         if value.type in EQUIPABLE_TYPES:
-            if value.type == 'weapon':
-                # self.stow_item(self.equipped_items['Held'])
-                self.equipped_items['Held'] = self.stored_items.pop(self.stored_items.index(value))
-                print('Equipped {} in hands.\n'.format(self.equipped_items['Held'].name))
+            # Ensure item is in stored_items before trying to pop/remove
+            if value in self.stored_items:
+                if value.type == 'weapon':
+                    # self.stow_item(self.equipped_items['Held']) # Optional: auto-stow previous
+                    self.equipped_items['Held'] = self.stored_items.pop(self.stored_items.index(value))
+                    print('Equipped {} in hands.\n'.format(self.equipped_items['Held'].name)) # Keep for CLI, GUI would use message_log
 
-            elif value.type == 'armor':
-                # self.stow_item(self.equipped_items['Body'])
-                self.equipped_items['Body'] = self.stored_items.pop(self.stored_items.index(value))
-                print('Equipped {} on body.\n'.format(self.equipped_items['Body'].name))
-            
-            elif value.type == 'trinket':
-                if value not in self.equipped_items['Trinkets']:
-                    self.equipped_items['Trinkets'].append(value)
-                    self.stored_items.remove(value)
-                    print('Equipped {} as a trinket.\n'.format(self.equipped_items['Trinkets'][-1].name))
-
+                elif value.type == 'armor':
+                    # self.stow_item(self.equipped_items['Body']) # Optional: auto-stow previous
+                    self.equipped_items['Body'] = self.stored_items.pop(self.stored_items.index(value))
+                    print('Equipped {} on body.\n'.format(self.equipped_items['Body'].name)) # Keep for CLI
+                
+                elif value.type == 'trinket':
+                    if value not in self.equipped_items['Trinkets']:
+                        self.equipped_items['Trinkets'].append(value)
+                        self.stored_items.remove(value) # Item is now equipped, remove from general storage
+                        print('Equipped {} as a trinket.\n'.format(self.equipped_items['Trinkets'][-1].name)) # Keep for CLI
+            else:
+                print(f"Cannot equip {value.name} as it's not in your stored items (perhaps already equipped?).")
         else:
-            print('You can not equip {}.'.format(value))
+            print('You can not equip {}.'.format(value.name))
 
     def stow_item(self, value):
         if value.type == 'weapon':
