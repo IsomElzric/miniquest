@@ -100,12 +100,11 @@ class Entity():
         
         attack_modifier_high = self.round_up(attack * 2) + self.damage
         attack_modifier_low = self.round_up(attack / 2) + self.damage
-        # message_log.append('Range that can be rolled is from {} - {}'.format(attack_modifier_low, attack_modifier_high)) # Optional debug
 
         damage = r.randint(attack_modifier_low, attack_modifier_high)
 
         message_log(f'{self.name} rolled {damage} for damage...')
-        message_log('') # Add spacing
+        # message_log('') # Add spacing
         
         total_damage = self.roll_crit(damage, message_log) 
         return total_damage
@@ -146,7 +145,7 @@ class Entity():
             
             message_log(f'{self.name} takes {total_damage} damage.') # Simplified message
             
-            message_log('') # Add spacing
+            # message_log('') # Add spacing
             self.current_health -= total_damage
 
     # MODIFIED: Only changed this method to use message_log
