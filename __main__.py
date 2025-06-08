@@ -335,9 +335,15 @@ class GameView(arcade.View):
                 options_text[0] = "1. Prepare" # Replace "Fight" with "Prepare" at camp
             self.current_menu_options = options_text
         elif menu_type == "travel":
-            connections = self.world.current_area.get_connections()
+            connections = self.world.available_travel_destinations # Use cached destinations
             options_text = [f"{i+1}. {conn}" for i, conn in enumerate(connections)]
             options_text.append(f"{len(connections) + 1}. Stay") # Option to stay in current area during travel prompt
+            self.current_menu_options = options_text
+        elif menu_type == "player_combat_turn": # For player's combat actions
+            options_text = ["Attack", "Flee"] # Commands will be "Attack" or "Flee"
+            self.current_menu_options = options_text
+        elif menu_type == "loot_decision": # For post-combat loot
+            options_text = ["Take Item", "Leave"]
             self.current_menu_options = options_text
         
         # Create button sprites
@@ -662,7 +668,7 @@ class GameView(arcade.View):
                 GAME_AREA_WIDTH / 2,
                 game_area_y_center - (SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT) / 2 + 10, # Position at bottom of game area
                 arcade.color.YELLOW,
-                font_size=10,
+                font_size=10, # Removed this prompt as it's no longer applicable with turn-based combat
                 anchor_x="center",
                 anchor_y="bottom"
             )
@@ -755,26 +761,36 @@ class GameView(arcade.View):
 
                 # Use world.handle_player_choice to manage state and get display mode
                 self.log_messages_to_display.clear() 
-                new_display_mode = self.world.handle_player_choice(command)
+                next_game_state = self.world.handle_player_choice(command)
                 
+                self.log_messages_to_display.extend(self.world.get_messages()) # Get all new messages
+
                 # Update local state based on world's decision
-                if new_display_mode == "combat_log":
+                if next_game_state == "player_combat_turn":
                     self.display_mode = "combat_log"
-                    self.log_messages_to_display.extend(self.world.get_messages())
-                    self._prepare_scrollable_text_for_current_mode()
-                elif new_display_mode == "travel_options":
+                    self.update_menu_options("player_combat_turn") # Show Attack/Flee buttons
+                elif next_game_state == "travel_options":
                     self.update_menu_options("travel") # This will rebuild buttons for travel
                     self.display_mode = "area_description" # Stay in description to show travel prompt
-                    self.log_messages_to_display.extend(self.world.get_messages()) 
-                    # Prepare scrollable text for the current area description
-                    self._prepare_scrollable_text_for_current_mode()
-                else: # "area_description" or other default
+                elif next_game_state == "loot_decision":
+                    self.display_mode = "combat_log" # Show loot messages in the log area
+                    self.update_menu_options("loot_decision") # Show Take/Leave buttons
+                elif next_game_state == "area_description": # Combat ended, or general action
                     self.display_mode = "area_description"
                     self.update_menu_options("main") # Rebuild main action buttons
                     self.load_current_area_art() # Reload art in case of travel
-                    self.log_messages_to_display.extend(self.world.get_messages()) # Get new messages
-                    self._prepare_scrollable_text_for_current_mode()
+                elif next_game_state == "combat_log": # Generic combat log, e.g., after enemy turn if player died
+                    self.display_mode = "combat_log"
+                    # If combat ended (e.g. player died), on_update will handle retreat.
+                    # If combat ended by enemy defeat, world.active_combat_instance would be None.
+                    if not self.world.active_combat_instance: # Check if combat is truly over
+                        self.update_menu_options("main")
+                    # Otherwise, if still in combat (e.g. enemy turn just happened), menu might not change yet
+                else: # Default fallback
+                    self.display_mode = "area_description"
+                    self.update_menu_options("main")
                     
+                self._prepare_scrollable_text_for_current_mode() # Prepare text for the new state
                 # No need to explicitly call self.on_draw(), the game loop handles it.
                 return # Exit after processing a button click
 
@@ -798,18 +814,31 @@ class GameView(arcade.View):
     def on_update(self, delta_time: float):
         """ Called every frame to update game logic. """
         self.player.update_stats()
-        # Check for game over state
-        if self.player.is_dead():
-            # Ensure death messages are captured before exiting
+        # Check for game over state (player defeated and combat has concluded)
+        if self.player.is_dead() and not self.world.active_combat_instance:
+            
+            self.world.player_defeated_retreat() # This appends messages about fleeing to camp
+
+            # Prepare to display the final messages including retreat
             self.display_mode = "combat_log" 
-            # The world.fight() method should have already appended a defeat message.
             self.log_messages_to_display.extend(self.world.get_messages()) # Get the final death message
             self._prepare_scrollable_text_for_current_mode()
             
             self.on_draw() # Draw one last frame with death message
-            # For now, just exit. You'd implement a GameOverView later.
-            print("Game Over!")
-            arcade.exit()
+            arcade.pause(3.0) # type: ignore # Pause for 3 seconds for the player to read
+
+            # Player is now at camp, refresh the GameView to reflect this
+            print("Player defeated, returning to camp.")
+            self.display_mode = "area_description" # Switch to showing area description
+            self.log_messages_to_display.clear()   # Clear the old combat/defeat messages
+            
+            self.world.display_current_area() # This will log camp name and description
+            self.log_messages_to_display.extend(self.world.get_messages()) # Get camp messages
+            
+            self.update_menu_options("main") # Reset menu options for the camp
+            self.load_current_area_art()     # Load art for the camp
+            self._prepare_scrollable_text_for_current_mode() # Prepare camp description for display
+            return # Important to stop further updates in this GameView instance
 
     def on_mouse_scroll(self, x: int, y: int, scroll_x: int, scroll_y: int):
         """ Handle mouse scroll events for the text area. """
