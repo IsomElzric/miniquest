@@ -58,7 +58,7 @@ class World():
         self.active_combat_instance = None
         self.current_combat_enemy = None
         self.is_player_combat_turn = False # True if waiting for player's combat input
-        self.player_must_flee_combat = False # New flag for defeat state
+        # self.player_must_flee_combat = False # No longer needed for the new defeat flow
 
         # New state for post-combat loot decision
         self.in_loot_decision_mode = False
@@ -168,16 +168,10 @@ class World():
                 self.append_message(f"'{choice_text}' is not a valid combat action now.")
                 return "player_combat_turn" # Stay in player's turn, show options again
 
-        if self.player_must_flee_combat:
-            if choice_text == "Flee Battle": # Or simply "Flee" if button text is just "Flee"
-                self.player_defeated_retreat() # This handles messages, health, location to camp
-                self.player_must_flee_combat = False # Reset flag
-                # This new state signals GameView to pause and then refresh to camp
-                return "returned_to_camp_after_defeat"
-            else:
-                self.append_message("You are too weak to do anything but flee.")
-                return "player_defeated_must_flee" # Stay in this state, forcing flee
-
+        # The old self.player_must_flee_combat block is removed.
+        # Defeat is now handled by transitioning to "show_defeat_log_at_camp"
+        # and then "Continue" to "area_description".
+        
         if self.in_loot_decision_mode:
             if choice_text == "Take Item":
                 if self.pending_loot_item:
@@ -221,7 +215,18 @@ class World():
             return "area_description" # Resting usually just updates the area description
         elif 'Prepare' in choice_text:
             self.prepare()
-            return "area_description" # Preparation details would show up in log/description area
+            return "inventory_management" # GUI will switch to inventory view
+        # NEW: Handle inventory view sub-actions. For now, they just keep the view.
+        # GameView handles the actual display.
+        elif choice_text == "View Items":
+            return "inventory_management" 
+        elif choice_text == "View Equipped":
+            return "inventory_management"
+        elif choice_text == "Continue": # New command after defeat log is shown
+            # This assumes the player is at camp and has seen defeat messages.
+            # Now, show the camp's area description.
+            self.display_current_area() # Populate log with camp description
+            return "area_description"
         else:
             self.append_message(f"'{choice_text}' is not a valid action or you cannot do that here.")
             return "area_description" # Default to showing message in log for invalid actions
@@ -340,8 +345,8 @@ class World():
             self.append_message("You have been overcome and cannot continue fighting.") # Inform player
             self.increment_time(1) # Combat took time
             self._end_combat_sequence()
-            self.player_must_flee_combat = True # Set flag
-            return "player_defeated_must_flee" # New state for GameView
+            self.player_defeated_retreat() # Immediately handle retreat (move to camp, log messages)
+            return "show_defeat_log_at_camp" # New state for GameView to display this log at camp
         else:
             # Back to player's turn
             self.is_player_combat_turn = True
@@ -372,7 +377,7 @@ class World():
         self.active_combat_instance = None
         self.current_combat_enemy = None
         self.is_player_combat_turn = False
-        self.player_must_flee_combat = False # Reset flee flag when combat ends
+        # self.player_must_flee_combat = False # No longer needed
         self._end_loot_decision_phase() # Also clear loot state if combat ends abruptly
 
     def _end_loot_decision_phase(self):

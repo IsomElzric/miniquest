@@ -5,6 +5,7 @@ from scripts.world import World
 import arcade
 import os
 import sys
+from collections import Counter # For counting items in inventory display
 import textwrap # For wrapping text into lines
 
 logging.getLogger('arcade').setLevel(logging.INFO)
@@ -278,6 +279,11 @@ class GameView(arcade.View):
         self.current_scrollable_lines = [] # Stores the pre-wrapped lines for the current view
         self.scrollable_text_rect_on_screen = None # To store screen coords of the text box for scroll detection
 
+        # For "Check Bags" functionality
+        self.pre_bags_view_mode = None
+        self.pre_bags_menu_type = None
+        self.active_menu_type = "main" # Track the current menu type
+
         # Load top banner background
         self.top_banner_texture = None
         try:
@@ -326,13 +332,16 @@ class GameView(arcade.View):
     def update_menu_options(self, menu_type="main"):
         # We need to refresh the current area data to get accurate connections after travel
         # self.world.display_current_area() # This is now handled more explicitly when actions resolve
+        self.active_menu_type = menu_type # Store the active menu type
 
         self.menu_action_buttons.clear() # Clear old buttons
 
         if menu_type == "main":
-            options_text = ["1. Fight", "2. Travel", "3. Rest"]
+            options_text = ["Fight", "Travel", "Rest"] # Start with base options
             if self.world.current_area.name == self.world.camp:
                 options_text[0] = "1. Prepare" # Replace "Fight" with "Prepare" at camp
+            else: # Only add "Check Bags" if not at camp
+                options_text.insert(2, "Check Bags") # Insert before "Rest"
             self.current_menu_options = options_text
         elif menu_type == "travel":
             connections = self.world.available_travel_destinations # Use cached destinations
@@ -340,16 +349,29 @@ class GameView(arcade.View):
             options_text.append(f"{len(connections) + 1}. Stay") # Option to stay in current area during travel prompt
             self.current_menu_options = options_text
         elif menu_type == "player_combat_turn": # For player's combat actions
-            options_text = ["Attack", "Flee"] # Commands will be "Attack" or "Flee"
+            options_text = ["Attack", "Flee", "Check Bags"] # Add Check Bags option
             self.current_menu_options = options_text
         elif menu_type == "loot_decision": # For post-combat loot
-            options_text = ["Take Item", "Leave"]
+            # Check if player can carry the pending loot item
+            if self.world.pending_loot_item and self.world.player.inventory.can_carry_item(self.world.pending_loot_item):
+                options_text = ["Take Item", "Leave"]
+            else:
+                # If cannot carry, or no pending item (should not happen if in this state)
+                options_text = ["Drop Loot", "Leave"] # "Drop Loot" means discard the new item
+            # No "Check Bags" here as it might complicate the loot decision flow,
+            # and inventory is already shown.
             self.current_menu_options = options_text
-        elif menu_type == "player_defeated_flee_only": # When player is defeated
-            options_text = ["Flee Battle"] # Only option is to flee
-            self.current_menu_options = options_text
+        # elif menu_type == "player_defeated_flee_only": # This menu type is replaced
+            # options_text = ["Flee Battle"] 
+            # self.current_menu_options = options_text
         elif menu_type == "inventory_management": # New menu for inventory
             options_text = ["View Items", "View Equipped", "Back"] # Initial inventory options
+            self.current_menu_options = options_text
+        elif menu_type == "view_bags_menu": # Menu for when viewing bags
+            options_text = ["Back"]
+            self.current_menu_options = options_text
+        elif menu_type == "defeat_acknowledged_menu": # New menu after defeat messages are shown at camp
+            options_text = ["Get Up"]
             self.current_menu_options = options_text
         
         # Create button sprites
@@ -364,13 +386,14 @@ class GameView(arcade.View):
             display_text = raw_option_text
             action_command = raw_option_text # Default action command
             if ". " in raw_option_text:
-                try:
+                # Check if the part before ". " is a number, to avoid stripping "Check Bags" etc.
+                parts = raw_option_text.split(". ", 1)
+                if len(parts) > 1 and parts[0].isdigit():
+                # try:
                     prefix = raw_option_text.split(". ", 1)[0]
                     int(prefix) 
                     display_text = raw_option_text.split(". ", 1)[1]
                     action_command = display_text # Use the stripped text for command if numbered
-                except ValueError:
-                    pass 
 
             if self.menu_button_texture:
                 button_sprite = arcade.Sprite(texture=self.menu_button_texture)
@@ -421,14 +444,7 @@ class GameView(arcade.View):
                                                    replace_whitespace=False, drop_whitespace=False,
                                                    break_long_words=True, break_on_hyphens=True))
         self.current_scrollable_lines = wrapped_lines
-        
-        # If in inventory mode, we might want to populate current_scrollable_lines differently
-        if self.display_mode == "inventory_management":
-            self.current_scrollable_lines.clear() # Clear any previous description/log
-            self.current_scrollable_lines.append("--- Your Inventory ---")
-            if not self.player.inventory.stored_items:
-                self.current_scrollable_lines.append("(Empty)")
-            # We'll add actual item listing here in the next steps
+        # Removed the problematic block that was overriding inventory text here.
 
     def _prepare_scrollable_text_for_current_mode(self):
         # Calculate the consistent, buffered width for the text area
@@ -439,14 +455,75 @@ class GameView(arcade.View):
             self._prepare_scrollable_text(self.world.current_area.description, TEXT_AREA_FONT_SIZE, consistent_text_area_width)
         elif self.display_mode == "combat_log":
             self._prepare_scrollable_text("\n".join(self.log_messages_to_display), LOG_AREA_FONT_SIZE, consistent_text_area_width)
+        
         elif self.display_mode == "inventory_management":
-            # For inventory, we'll build the text differently.
-            # This is a placeholder; actual inventory display will be more complex.
-            inventory_text = "--- Your Inventory ---\n\n"
+            inventory_text = "--- Camp Preparations ---\n\n"
+
+            inventory_text += "== Equipped Items ==\n"
+            if self.player.inventory.equipped_items['Held']:
+                inventory_text += f"Held: {self.player.inventory.equipped_items['Held'].name}\n"
+            else:
+                inventory_text += "Held: (None)\n"
+            if self.player.inventory.equipped_items['Body']:
+                inventory_text += f"Body: {self.player.inventory.equipped_items['Body'].name}\n"
+            else:
+                inventory_text += "Body: (None)\n"
+            if self.player.inventory.equipped_items['Trinkets']:
+                trinket_names = [t.name for t in self.player.inventory.equipped_items['Trinkets']]
+                inventory_text += f"Trinkets: {', '.join(trinket_names) if trinket_names else '(None)'}\n"
+            else:
+                inventory_text += "Trinkets: (None)\n"
+            inventory_text += "\n"
+
+            inventory_text += "== Carried Items (In Bags) ==\n"
             if not self.player.inventory.stored_items:
-                inventory_text += "(Your bag is empty.)"
-            # In future steps, we'll iterate through self.player.inventory.stored_items here.
+                inventory_text += "(Bags are empty)\n"
+            else:
+                item_counts = Counter(item.name for item in self.player.inventory.stored_items)
+                for name, count in item_counts.items():
+                    sample_item = next(item for item in self.player.inventory.stored_items if item.name == name)
+                    inventory_text += f" - {name} ({sample_item.type})"
+                    if count > 1:
+                        inventory_text += f" x{count}"
+                    inventory_text += "\n"
+            inventory_text += "\n"
+
+            inventory_text += "== Strongbox Items (At Camp) ==\n"
+            if not self.player.inventory.strongbox_items:
+                inventory_text += "(Strongbox is empty)\n"
+            else:
+                strongbox_item_counts = Counter(item.name for item in self.player.inventory.strongbox_items)
+                for name, count in strongbox_item_counts.items():
+                    sample_item = next(item for item in self.player.inventory.strongbox_items if item.name == name)
+                    inventory_text += f" - {name} ({sample_item.type})"
+                    if count > 1:
+                        inventory_text += f" x{count}"
+                    inventory_text += "\n"
+            
             self._prepare_scrollable_text(inventory_text, TEXT_AREA_FONT_SIZE, consistent_text_area_width)
+
+        elif self.display_mode == "view_bags":
+            bags_text = "--- Your Bags ---\n\n"
+            bags_text += "== Equipped Items ==\n"
+            if self.player.inventory.equipped_items['Held']: bags_text += f"Held: {self.player.inventory.equipped_items['Held'].name}\n"
+            else: bags_text += "Held: (None)\n"
+            if self.player.inventory.equipped_items['Body']: bags_text += f"Body: {self.player.inventory.equipped_items['Body'].name}\n"
+            else: bags_text += "Body: (None)\n"
+            if self.player.inventory.equipped_items['Trinkets']:
+                trinket_names = [t.name for t in self.player.inventory.equipped_items['Trinkets']]
+                bags_text += f"Trinkets: {', '.join(trinket_names) if trinket_names else '(None)'}\n"
+            else: bags_text += "Trinkets: (None)\n"
+            bags_text += "\n"
+            bags_text += "== Carried Items (In Bags) ==\n"
+            if not self.player.inventory.stored_items: bags_text += "(Bags are empty)\n"
+            else:
+                item_counts = Counter(item.name for item in self.player.inventory.stored_items)
+                for name, count in item_counts.items():
+                    sample_item = next(item for item in self.player.inventory.stored_items if item.name == name)
+                    bags_text += f" - {name} ({sample_item.type})"
+                    if count > 1: bags_text += f" x{count}"
+                    bags_text += "\n"
+            self._prepare_scrollable_text(bags_text, TEXT_AREA_FONT_SIZE, consistent_text_area_width)
 
     def on_show_view(self):
         arcade.set_background_color(arcade.color.GRAY)
@@ -592,15 +669,16 @@ class GameView(arcade.View):
             (0, 0, 0, 180) # Slightly more opaque for readability
         )       
 
-        # NEW: Conditional rendering based on display_mode
+        # --- Determine parameters for scrollable text based on display_mode ---
+        _scroll_area_top_y_for_lines = description_y  # Default: top of the text box
+        _scroll_area_height_for_lines = text_bg_height # Default: full height of text box
+        _line_font_size = TEXT_AREA_FONT_SIZE
+        _line_color = arcade.color.LIGHT_GRAY # Default color
+
         if self.display_mode == "area_description":
             # --- Location Name ---
             location_name_text = f"Location: {self.world.current_area.name}"
-            
-            # Define font sizes for clarity
             name_font_size = 14 # Stays as is, not part of scrollable TEXT_AREA_FONT_SIZE
-            # description_font_size is now TEXT_AREA_FONT_SIZE
-            # Space between the bottom of the name and top of the description
             spacing_after_name = 5 
 
             arcade.draw_text(
@@ -616,86 +694,55 @@ class GameView(arcade.View):
                 bold=True # Make the location name stand out
             )
 
-            # --- Scrollable Location Description ---
-            description_start_y = description_y - (name_font_size + spacing_after_name)
-            scroll_area_top_y = description_start_y
-            scroll_area_left_x = description_x
-            scroll_area_width_val = description_width
-            scroll_area_height_val = text_bg_height - (name_font_size + spacing_after_name)
-            
-            self.scrollable_text_rect_on_screen = (
-                scroll_area_left_x, scroll_area_top_y - scroll_area_height_val, # x, bottom_y
-                scroll_area_width_val, scroll_area_height_val # width, height
-            )
-            # arcade.draw_lrbt_rectangle_outline(*self.scrollable_text_rect_on_screen, arcade.color.RED, 1) # Debug
-
-            if self.current_scrollable_lines:
-                first_visible_line_idx = int(self.scroll_offset_y / TEXT_AREA_LINE_HEIGHT)
-                lines_in_view = int(scroll_area_height_val / TEXT_AREA_LINE_HEIGHT)
-
-                for i in range(len(self.current_scrollable_lines)):
-                    if i < first_visible_line_idx:
-                        continue
-                    if i > first_visible_line_idx + lines_in_view + 1: # +1 for partially visible line
-                        break
-                    
-                    line_text_content = self.current_scrollable_lines[i]
-                    line_y_offset_from_content_top = i * TEXT_AREA_LINE_HEIGHT
-                    draw_y_on_screen = scroll_area_top_y - (line_y_offset_from_content_top - self.scroll_offset_y)
-
-                    # Basic clipping: only draw if the line's top is within drawable vertical space
-                    if draw_y_on_screen <= scroll_area_top_y and \
-                       draw_y_on_screen >= scroll_area_top_y - scroll_area_height_val - TEXT_AREA_LINE_HEIGHT:
-                        arcade.draw_text(
-                            line_text_content,
-                            scroll_area_left_x,
-                            draw_y_on_screen,
-                            arcade.color.LIGHT_GRAY,
-                            font_size=TEXT_AREA_FONT_SIZE,
-                            width=scroll_area_width_val,
-                            anchor_x="left",
-                            anchor_y="top"
-                        )
-
+            _scroll_area_top_y_for_lines = description_y - (name_font_size + spacing_after_name)
+            _scroll_area_height_for_lines = text_bg_height - (name_font_size + spacing_after_name)
+            _line_font_size = TEXT_AREA_FONT_SIZE
+            _line_color = arcade.color.LIGHT_GRAY
         elif self.display_mode == "combat_log":
-            # --- Scrollable Combat Log ---
-            scroll_area_top_y = description_y # Log uses the full text_bg_height
-            scroll_area_left_x = description_x
-            scroll_area_width_val = description_width
-            scroll_area_height_val = text_bg_height
+            _line_font_size = LOG_AREA_FONT_SIZE
+            _line_color = arcade.color.WHITE
+        elif self.display_mode == "inventory_management" or self.display_mode == "view_bags":
+            _line_font_size = TEXT_AREA_FONT_SIZE 
+            _line_color = arcade.color.WHITE # Brighter for inventory text
 
-            self.scrollable_text_rect_on_screen = (
-                scroll_area_left_x, scroll_area_top_y - scroll_area_height_val,
-                scroll_area_width_val, scroll_area_height_val
-            )
-            # arcade.draw_lrbt_rectangle_outline(*self.scrollable_text_rect_on_screen, arcade.color.CYAN, 1) # Debug
+        # Update self.scrollable_text_rect_on_screen for the current mode (used by on_mouse_scroll)
+        self.scrollable_text_rect_on_screen = (
+            description_x,  # left_x
+            _scroll_area_top_y_for_lines - _scroll_area_height_for_lines,  # bottom_y
+            description_width,  # width
+            _scroll_area_height_for_lines  # height
+        )
+        # For debugging the scroll area bounds:
+        # arcade.draw_lrbt_rectangle_outline(*self.scrollable_text_rect_on_screen, arcade.color.GREEN, 1)
 
-            if self.current_scrollable_lines:
-                first_visible_line_idx = int(self.scroll_offset_y / TEXT_AREA_LINE_HEIGHT)
-                lines_in_view = int(scroll_area_height_val / TEXT_AREA_LINE_HEIGHT)
+        # --- Common Scrollable Text Drawing Logic ---
+        if self.current_scrollable_lines:
+            first_visible_line_idx = int(self.scroll_offset_y / TEXT_AREA_LINE_HEIGHT)
+            lines_in_view = int(_scroll_area_height_for_lines / TEXT_AREA_LINE_HEIGHT)
 
-                for i in range(len(self.current_scrollable_lines)):
-                    if i < first_visible_line_idx:
-                        continue
-                    if i > first_visible_line_idx + lines_in_view + 1:
-                        break
-                    
-                    line_text_content = self.current_scrollable_lines[i]
-                    line_y_offset_from_content_top = i * TEXT_AREA_LINE_HEIGHT
-                    draw_y_on_screen = scroll_area_top_y - (line_y_offset_from_content_top - self.scroll_offset_y)
+            for i in range(len(self.current_scrollable_lines)):
+                if i < first_visible_line_idx:
+                    continue
+                if i > first_visible_line_idx + lines_in_view + 1:  # +1 for partially visible line
+                    break
+                
+                line_text_content = self.current_scrollable_lines[i]
+                line_y_offset_from_content_top = i * TEXT_AREA_LINE_HEIGHT
+                draw_y_on_screen = _scroll_area_top_y_for_lines - (line_y_offset_from_content_top - self.scroll_offset_y)
 
-                    if draw_y_on_screen <= scroll_area_top_y and \
-                       draw_y_on_screen >= scroll_area_top_y - scroll_area_height_val - TEXT_AREA_LINE_HEIGHT:
-                        arcade.draw_text(
-                            line_text_content,
-                            scroll_area_left_x,
-                            draw_y_on_screen,
-                            arcade.color.WHITE,
-                            font_size=LOG_AREA_FONT_SIZE,
-                            width=scroll_area_width_val,
-                            anchor_x="left",
-                            anchor_y="top"
-                        )
+                # Basic clipping: only draw if the line's top is within drawable vertical space
+                if draw_y_on_screen <= _scroll_area_top_y_for_lines and \
+                   draw_y_on_screen >= _scroll_area_top_y_for_lines - _scroll_area_height_for_lines - TEXT_AREA_LINE_HEIGHT:
+                    arcade.draw_text(
+                        line_text_content,
+                        description_x, # Use description_x as the consistent left starting point
+                        draw_y_on_screen,
+                        _line_color,
+                        font_size=_line_font_size,
+                        width=description_width, # Use description_width for consistency
+                        anchor_x="left",
+                        anchor_y="top"
+                    )
 
         # --- Draw Right-Hand Menu ---
         if self.right_panel_background_texture:
@@ -780,61 +827,88 @@ class GameView(arcade.View):
                 clicked_button = clicked_buttons[0] # Get the first button clicked (should only be one)
                 command = clicked_button.properties.get('action_command', "")
                 
-                print(f"Clicked button: {command}")
+                print(f"Clicked button: '{command}'")
 
-                # Use world.handle_player_choice to manage state and get display mode
-                self.log_messages_to_display.clear() 
-                next_game_state = self.world.handle_player_choice(command)
+                # --- Handle locally managed view changes first ---
+                if command == "Back" and self.display_mode == "inventory_management":
+                    self.display_mode = "area_description"
+                    self.update_menu_options("main")
+                    self.log_messages_to_display.clear()
+                    self.world.display_current_area() # Get area description
+                    self.log_messages_to_display.extend(self.world.get_messages())
+                    self._prepare_scrollable_text_for_current_mode()
+                    return # Handled locally
+
+                elif command == "Check Bags":
+                    self.pre_bags_view_mode = self.display_mode
+                    self.pre_bags_menu_type = self.active_menu_type # Use stored active_menu_type
+                    
+                    self.display_mode = "view_bags"
+                    self.update_menu_options("view_bags_menu")
+                    
+                    self.log_messages_to_display.clear()
+                    self._prepare_scrollable_text_for_current_mode()
+                    return # Handled locally
+
+                elif command == "Back" and self.active_menu_type == "view_bags_menu": # Specifically "Back" from bags view
+                    self.display_mode = self.pre_bags_view_mode if self.pre_bags_view_mode else "area_description"
+                    current_menu_to_restore = self.pre_bags_menu_type if self.pre_bags_menu_type else "main"
+                    self.update_menu_options(current_menu_to_restore)
+                    
+                    self.log_messages_to_display.clear()
+                    if self.display_mode == "area_description":
+                        # If returning to area description, fetch any pending messages from world
+                        # (e.g., if "Check Bags" was used during travel prompt)
+                        self.log_messages_to_display.extend(self.world.get_messages()) 
+                    elif self.display_mode == "combat_log" and current_menu_to_restore == "player_combat_turn":
+                        # If returning to player's combat turn, re-add turn prompt
+                        self.log_messages_to_display.append("--- Your Turn ---")
+                        self.log_messages_to_display.append("It's your turn!")
+                    
+                    self._prepare_scrollable_text_for_current_mode()
+                    return # Handled locally
+
+                # --- If not a local view change, proceed with world interaction ---
+                self.log_messages_to_display.clear()
+                next_game_state = self.world.handle_player_choice(command) # World processes other commands
+                self.log_messages_to_display.extend(self.world.get_messages())
                 
-                self.log_messages_to_display.extend(self.world.get_messages()) # Get all new messages
-
                 # Update local state based on world's decision
                 if next_game_state == "player_combat_turn":
                     self.display_mode = "combat_log"
                     self.update_menu_options("player_combat_turn") # Show Attack/Flee buttons
                 elif next_game_state == "travel_options":
-                    self.update_menu_options("travel") # This will rebuild buttons for travel
                     self.display_mode = "area_description" # Stay in description to show travel prompt
+                    self.update_menu_options("travel") # This will rebuild buttons for travel
                 elif next_game_state == "loot_decision":
                     self.display_mode = "combat_log" # Show loot messages in the log area
                     self.update_menu_options("loot_decision") # Show Take/Leave buttons
-                elif next_game_state == "player_defeated_must_flee":
+                    # Prepare text to show current inventory relevant to loot decision
+                    loot_info_text = "--- Loot Found! ---\n"
+                    if self.world.pending_loot_item:
+                        loot_info_text += f"You found: {self.world.pending_loot_item.name} ({self.world.pending_loot_item.type})\n\n"
+                        loot_info_text += "Your carried items:\n"
+                        if self.world.player.inventory.stored_items:
+                            for item in self.world.player.inventory.stored_items:
+                                loot_info_text += f" - {item.name} ({item.type})\n"
+                        else:
+                            loot_info_text += "(None carried)\n"
+                    self._prepare_scrollable_text(loot_info_text, LOG_AREA_FONT_SIZE, GAME_AREA_WIDTH - (2 * LEFT_PADDING) - 5)
+                # elif next_game_state == "player_defeated_must_flee": # This state is removed
+                    # self.display_mode = "combat_log" # Show defeat messages
+                    # self.update_menu_options("player_defeated_flee_only") # Show only "Flee Battle"
+                elif next_game_state == "show_defeat_log_at_camp": # New state after player is defeated
                     self.display_mode = "combat_log" # Show defeat messages
-                    self.update_menu_options("player_defeated_flee_only") # Show only "Flee Battle"
+                    self.load_current_area_art() # World has moved player to camp, update art
+                    self.update_menu_options("defeat_acknowledged_menu") # Show "Continue" button
                 elif next_game_state == "inventory_management": # Player chose "Prepare"
                     self.display_mode = "inventory_management"
                     self.update_menu_options("inventory_management")
-                    # _prepare_scrollable_text_for_current_mode will be called below
                 elif next_game_state == "area_description": # Combat ended, or general action
                     self.display_mode = "area_description"
                     self.update_menu_options("main") # Rebuild main action buttons
                     self.load_current_area_art() # Reload art in case of travel
-                elif next_game_state == "combat_log": # Generic combat log, e.g., after enemy turn if player died
-                    self.display_mode = "combat_log"
-                    # If combat ended (e.g. player died), on_update will handle retreat.
-                    # If combat ended by enemy defeat, world.active_combat_instance would be None.
-                    if not self.world.active_combat_instance: # Check if combat is truly over
-                        self.update_menu_options("main")
-                    # Otherwise, if still in combat (e.g. enemy turn just happened), menu might not change yet
-                else: # Default fallback
-                    self.display_mode = "area_description"
-                    self.update_menu_options("main")
-                
-                # Special handling for returning to camp after defeat and fleeing
-                if next_game_state == "returned_to_camp_after_defeat":
-                    # Messages from player_defeated_retreat are already in the log
-                    self.display_mode = "combat_log" # Show final messages (retreat, new day)
-                    self._prepare_scrollable_text_for_current_mode() # Prepare these messages
-                    self.on_draw() # Draw this frame
-                    arcade.pause(3.0) # type: ignore # Pause for player to read
-                    
-                    # Now refresh to camp view
-                    self.display_mode = "area_description"
-                    self.log_messages_to_display.clear() # Clear old log
-                    self.world.display_current_area() # World is now at camp, get its description
-                    self.log_messages_to_display.extend(self.world.get_messages()) # Add camp messages
-                    self.update_menu_options("main")
-                    
+
                 self._prepare_scrollable_text_for_current_mode() # Prepare text for the new state
                 # No need to explicitly call self.on_draw(), the game loop handles it.
                 return # Exit after processing a button click
