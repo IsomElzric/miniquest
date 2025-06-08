@@ -17,7 +17,7 @@ class DayCycle:
         Returns True if the day ends due to exhaustion, False otherwise.
         """
         self.hour += value
-        self.message_log(f"Hour: {self.hour}")
+        # self.message_log(f"Hour: {self.hour}") # Removed, as hour is in the top panel
 
         if self.hour >= self.max_hours_before_exhaustion:
             self.message_log('Exhaustion takes you.')
@@ -50,7 +50,7 @@ class DayCycle:
         self._night_announced = False
         self._dusk_announced = False
         self.message_log('A new dawn breaks.')
-        self.message_log(f"Hour: {self.hour}") # Log initial hour of new day
+        # self.message_log(f"Hour: {self.hour}") # Removed, as hour is in the top panel
 
     def get_enemy_night_modifier(self):
         """Returns a stat modifier for enemies if it's night."""

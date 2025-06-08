@@ -200,7 +200,8 @@ class World():
         elif 'Travel' in choice_text:
             self.append_message("Where would you like to travel?")
             self.in_travel_selection_mode = True
-            self.available_travel_destinations = self.get_travel_options()
+            # CRITICAL FIX: Make a copy of the connections list
+            self.available_travel_destinations = list(self.get_travel_options())
             return "travel_options" # Indicate to GUI to show travel options
         elif 'Rest' in choice_text:
             self.rest()

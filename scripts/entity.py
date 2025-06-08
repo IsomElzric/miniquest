@@ -120,8 +120,9 @@ class Entity():
 
         roll = r.randrange(1, 101, 1) - crit_modifier
 
-        message_log(f'{self.name} needs a {crit_chance} or less to crit...')
-        message_log(f'{self.name} rolled a {roll} to crit with a modifier of {crit_modifier}...')
+        # Removed detailed crit roll messages for brevity
+        # message_log(f'{self.name} needs a {crit_chance} or less to crit...')
+        # message_log(f'{self.name} rolled a {roll} to crit with a modifier of {crit_modifier}...')
         
         if roll <= crit_chance:
             total_damage = (damage * 2) + self.round_up(crit_damage_bonus)
@@ -131,8 +132,8 @@ class Entity():
             
             return total_damage
         else:
-            message_log(f'{self.name} did not land a critical hit.') # Clarify no crit
-            message_log('') # Add spacing
+            # message_log(f'{self.name} did not land a critical hit.') # Clarify no crit
+            # message_log('') # Add spacing
             return damage
         
     def take_damage(self, damage, message_log, combat=True): 
@@ -143,7 +144,7 @@ class Entity():
             if total_damage < 0:
                 total_damage = 0
             
-            message_log(f'{self.name} took {total_damage} damage after {(damage - total_damage)} defense...')
+            message_log(f'{self.name} takes {total_damage} damage.') # Simplified message
             
             message_log('') # Add spacing
             self.current_health -= total_damage
