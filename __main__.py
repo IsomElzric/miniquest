@@ -817,22 +817,9 @@ class GameView(arcade.View):
                 return # Exit after processing a button click
 
         else: # Click was outside the menu area (e.g., in the main game art area)
-            if self.display_mode == "combat_log":
-                # If in combat log mode and clicked outside menu, switch back to area description
-                self.display_mode = "area_description"
-                self.log_messages_to_display.clear() # Clear old messages from log
-                self.world.get_messages() # Clear messages from world's log as well
-                self._prepare_scrollable_text_for_current_mode()
-                # self.on_draw() # Redraw to show area description
-            elif self.display_mode == "area_description" and any("Stay" in opt for opt in self.current_menu_options): # Check if current options are travel options (by looking for 'Stay')
-                # If we're in travel selection mode but clicked outside, assume "Stay"
-                self.world.handle_player_choice("Stay") # Explicitly call "Stay"
-                self.update_menu_options("main") # Revert to main menu
-                self.log_messages_to_display.extend(self.world.get_messages())
-                self._prepare_scrollable_text_for_current_mode()
-                # self.on_draw()
-
-
+            # Clicks outside the right-hand menu should not trigger game state changes.
+            # The player must use the buttons in the menu to proceed.
+            pass
     def on_update(self, delta_time: float):
         """ Called every frame to update game logic. """
         self.player.update_stats()

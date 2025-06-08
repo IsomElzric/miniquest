@@ -103,7 +103,7 @@ class Entity():
 
         damage = r.randint(attack_modifier_low, attack_modifier_high)
 
-        message_log(f'{self.name} rolled {damage} for damage...')
+        # message_log(f'{self.name} rolled {damage} for damage...')
         # message_log('') # Add spacing
         
         total_damage = self.roll_crit(damage, message_log) 
