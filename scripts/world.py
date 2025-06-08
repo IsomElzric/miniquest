@@ -6,6 +6,7 @@ from scripts.builder import Builder # Ensure Builder is imported
 from scripts.location import Location
 from scripts.inventory import Inventory
 from scripts.loot import Loot
+from scripts.day_cycle import DayCycle # Import the new DayCycle class
 import sys
 import os
 import random
@@ -27,10 +28,10 @@ class World():
         # --- Pass message_log to Builder ---
         self.builder = Builder(self.append_message) # Pass the method, not the list
 
+        self.day_cycle = DayCycle(self.append_message) # Instantiate DayCycle
         self.loot = Loot()
-        self.time = 0
         self.current_area = Location() # This defaults to 'Unset'
-        # print(f"DEBUG: Initial current_area after Location() creation: {self.current_area.name}")
+        self.day_cycle.message_log(f"Hour: {self.day_cycle.hour}") # Log initial hour
 
         self.area_list = self.builder.build_areas()
 
@@ -58,6 +59,11 @@ class World():
         self.active_combat_instance = None
         self.current_combat_enemy = None
         self.is_player_combat_turn = False # True if waiting for player's combat input
+        self.player_must_flee_combat = False # New flag for defeat state
+
+        # New state for post-combat loot decision
+        self.in_loot_decision_mode = False
+        self.pending_loot_item = None
 
 
     def append_message(self, message):
@@ -115,27 +121,15 @@ class World():
         # print(f"DEBUG: Displaying area: {self.current_area.name}")
 
     def increment_time(self, value):
-        self.time += value
-        self.append_message(f"You are on hour {self.time}")
-
-        if self.time >= 12:
-            self.append_message('Exhaustion takes you')
+        day_ended = self.day_cycle.increment_hour(value)
+        if day_ended:
             self.rest()
-        elif self.time > 8:
-            self.append_message('Night has fallen')
-        elif self.time == 8:
-            self.append_message('Dusk is upon you')
-        elif self.time < 8:
-            self.append_message('You have daylight yet')
-
-    def start_day(self):
-        self.time = 0
-        self.append_message('A new dawn breaks')
 
     def rest(self):
-        self.start_day()
+        self.day_cycle.reset_day() # Use DayCycle to reset time
         self.player.reset_health()
         self.set_location(self.camp)
+        # Message about resting and new dawn is now handled by DayCycle and set_location/display_current_area
         self.append_message(f"You rested and recovered. You are now at your camp: {self.current_area.name}.")
 
     def display_location_options(self):
@@ -168,6 +162,31 @@ class World():
             else:
                 self.append_message(f"'{choice_text}' is not a valid combat action now.")
                 return "player_combat_turn" # Stay in player's turn, show options again
+
+        if self.player_must_flee_combat:
+            if choice_text == "Flee Battle": # Or simply "Flee" if button text is just "Flee"
+                self.player_defeated_retreat() # This handles messages, health, location to camp
+                self.player_must_flee_combat = False # Reset flag
+                # This new state signals GameView to pause and then refresh to camp
+                return "returned_to_camp_after_defeat"
+            else:
+                self.append_message("You are too weak to do anything but flee.")
+                return "player_defeated_must_flee" # Stay in this state, forcing flee
+
+        if self.in_loot_decision_mode:
+            if choice_text == "Take Item":
+                if self.pending_loot_item:
+                    self.loot.add_item_to_inventory(self.player, self.pending_loot_item, self.append_message)
+                    # add_item_to_inventory already logs and adds spacing
+                self._end_loot_decision_phase()
+                self.display_current_area() # Refresh area description
+                return "area_description"
+            elif choice_text == "Leave":
+                self.append_message(f"You decide to leave the {self.pending_loot_item.name if self.pending_loot_item else 'item'}.")
+                self.append_message('')
+                self._end_loot_decision_phase()
+                self.display_current_area() # Refresh area description
+                return "area_description"
 
         if self.in_travel_selection_mode:
             return self.handle_travel_choice(choice_text)
@@ -227,6 +246,7 @@ class World():
     def initiate_combat(self):
         """Sets up combat, determines the first attacker, and returns the game state."""
         self.player.print_entity(self.append_message) # Pass log_func to print_entity
+        # print_entity already adds a blank line
         self.current_combat_enemy = self.generate_enemy()
 
         if self.current_combat_enemy is None:
@@ -238,10 +258,12 @@ class World():
         self.active_combat_instance.add_combatant(self.player)
         self.active_combat_instance.add_combatant(self.current_combat_enemy)
         self.active_combat_instance.print_combatants() # Logs who acts first
+        self.append_message('') # Add spacing
 
         first_attacker = self.active_combat_instance.combatant_list[0]
         if first_attacker.is_player:
             self.is_player_combat_turn = True
+            self.append_message("--- Your Turn ---")
             self.append_message("It's your turn!")
             return "player_combat_turn"
         else:
@@ -261,10 +283,18 @@ class World():
 
         if self.current_combat_enemy.is_dead():
             self.append_message(f"You have defeated {self.current_combat_enemy.name}!")
-            self.active_combat_instance.generate_loot(self.player, self.current_combat_enemy)
+            # self.append_message('') # Spacing will be handled by loot messages or lack thereof
+            
+            dropped_item = self.active_combat_instance.generate_loot(self.player, self.current_combat_enemy)
             self.increment_time(1)
             self._end_combat_sequence()
-            return "area_description" # Combat over
+
+            if dropped_item:
+                self.pending_loot_item = dropped_item
+                self.in_loot_decision_mode = True
+                return "loot_decision" # New state for GUI
+            else:
+                return "area_description" # No loot, combat over
         else:
             # Enemy's turn
             return self._process_enemy_turn()
@@ -288,18 +318,20 @@ class World():
             self._end_combat_sequence()
             return "area_description"
 
-        self.append_message(f"It's {self.current_combat_enemy.name}'s turn.") # Now safe to call .name
+        self.append_message(f"--- {self.current_combat_enemy.name}'s Turn ---") # Now safe to call .name
+        # self.append_message(f"It's {self.current_combat_enemy.name}'s turn.") # Redundant with header
         self.active_combat_instance.execute_enemy_attack(self.current_combat_enemy, self.player)
 
         if self.player.is_dead():
+            self.append_message("You have been overcome and cannot continue fighting.") # Inform player
             self.increment_time(1) # Combat took time
             self._end_combat_sequence()
-            # GameView.on_update will detect player.is_dead() and trigger retreat.
-            # Return "combat_log" so the final messages are displayed before retreat.
-            return "combat_log" 
+            self.player_must_flee_combat = True # Set flag
+            return "player_defeated_must_flee" # New state for GameView
         else:
             # Back to player's turn
             self.is_player_combat_turn = True
+            self.append_message("--- Your Turn ---")
             self.append_message("It's your turn!")
             return "player_combat_turn"
 
@@ -311,6 +343,7 @@ class World():
         flee_successful = True 
         if flee_successful:
             self.append_message("You successfully fled from combat!")
+            self.append_message('') # Add spacing
             self.increment_time(1) # Fleeing takes time
             self._end_combat_sequence()
             self.display_current_area() # Refresh current area description after fleeing
@@ -325,13 +358,19 @@ class World():
         self.active_combat_instance = None
         self.current_combat_enemy = None
         self.is_player_combat_turn = False
+        self.player_must_flee_combat = False # Reset flee flag when combat ends
+        self._end_loot_decision_phase() # Also clear loot state if combat ends abruptly
+
+    def _end_loot_decision_phase(self):
+        self.in_loot_decision_mode = False
+        self.pending_loot_item = None
 
     def player_defeated_retreat(self):
         """Handles the state changes and messages when the player is defeated and flees."""
         self.append_message("You had to flee back to safety.")
         self.player.reset_health() # Restore health
-        self.set_location(self.camp) # Move to camp
-        self.time = 0 # Reset time, effectively starting a new day at camp
+        self.set_location(self.camp) # Move to camp - this will trigger display_current_area in GameView
+        self.day_cycle.reset_day() # Reset time via DayCycle
         self.append_message(f"You find yourself back at your camp: {self.current_area.name}.")
         self.append_message("A new day begins, offering a chance to recover from your ordeal.")
         # GameView will handle displaying these messages and transitioning.
@@ -356,12 +395,17 @@ class World():
             # --- Use the builder to clone the enemy ---
             cloned_enemy = self.builder.clone_enemy(enemy_template)            # NOTE: If clone_enemy is only for Player, then you need a generic clone_entity
             cloned_enemy.scaling() # Apply level-based scaling
+            
+            # Apply night modifier
+            night_modifier = self.day_cycle.get_enemy_night_modifier()
+            cloned_enemy.apply_night_scaling(night_modifier, self.append_message)
             cloned_enemy.update_stats() # Update stats after scaling
             # or a specific clone_enemy in Builder that returns an Entity object.
             # Assuming Builder.clone_entity handles both or you have a dedicated clone_enemy.
 
             # These messages are appended after cloning the entity
             cloned_enemy.print_entity(self.append_message) # Prints entity stats to log
+            # print_entity already adds a blank line
             self.append_message(f"A {cloned_enemy.name} appeared!")
             return cloned_enemy
         else:
@@ -371,3 +415,4 @@ class World():
     def prepare(self):
         self.append_message("You enter your camp and begin to prepare.")
         self.player.print_entity(self.append_message)
+        self.append_message("What would you like to do in preparation? (Inventory, Crafting, etc.)")
