@@ -461,17 +461,17 @@ class GameView(arcade.View):
         text_color = arcade.color.WHITE
         font_size = 12
 
-        # Name, Level
+        # Name, Level - First item on the top line
+        name_level_str = f"Name: {self.player.name} | Level: {self.player.level}"
         arcade.draw_text(
-            f"Name: {self.player.name} | Level: {self.player.level}",
+            name_level_str,
             LEFT_PADDING,
             player_info_y,
             text_color,
             font_size=font_size,
             anchor_x="left",
-            anchor_y="center", # Adjusted for better vertical alignment with single line
-            width=int(GAME_AREA_WIDTH - 2 * LEFT_PADDING),
-            align="left"
+            anchor_y="center"
+            # Removed width constraint to let it take natural width; we'll position subsequent items based on this
         )
         
         # Combat Stats (Attack, Defense, Speed)
@@ -490,12 +490,18 @@ class GameView(arcade.View):
             align="left"
         )
 
-        # Determine time color - this definition is correct
+        # Determine time color for the "Hour" display
         time_text_color = arcade.color.RED if self.world.day_cycle.is_night() else text_color
 
-        # Income / Wealth
+        # --- Position Wealth and Hour dynamically after Name/Level ---
+        # Measure the width of the "Name | Level" text
+        name_level_text_obj = arcade.Text(name_level_str, 0, 0, text_color, font_size)
+        current_x_offset = LEFT_PADDING + name_level_text_obj.content_width
+        spacing_between_banner_items = 20 # Adjust as needed
+
+        # Wealth - Positioned after Name/Level
         wealth_text_str = f"Wealth: {self.player.inventory.income}"
-        wealth_text_x_start = int(LEFT_PADDING + (GAME_AREA_WIDTH / 2))
+        wealth_text_x_start = current_x_offset + spacing_between_banner_items
         arcade.draw_text(
             wealth_text_str,
             wealth_text_x_start,
@@ -503,16 +509,16 @@ class GameView(arcade.View):
             text_color, # Wealth is always the default text_color
             font_size=font_size,
             anchor_x="left",
-            anchor_y="center", # Adjusted for better vertical alignment
-            width=int((GAME_AREA_WIDTH / 2) - 2 * LEFT_PADDING),
-            align="left"
+            anchor_y="center"
         )
 
-        # Hour - drawn separately to control its color
+        # Measure Wealth text to position Hour text next
+        wealth_text_obj_for_measure = arcade.Text(wealth_text_str, 0, 0, text_color, font_size)
+        current_x_offset = wealth_text_x_start + wealth_text_obj_for_measure.content_width
+
+        # Hour - Positioned after Wealth, drawn separately to control its color
         hour_text_str = f" | Hour: {self.world.day_cycle.hour}"
-        # Measure wealth_text to position hour_text next to it
-        wealth_text_obj = arcade.Text(wealth_text_str, 0,0, text_color, font_size)
-        hour_text_x_start = wealth_text_x_start + wealth_text_obj.content_width + 5 # 5px spacing
+        hour_text_x_start = current_x_offset + spacing_between_banner_items / 2 # A bit less spacing for the separator
         
         arcade.draw_text(
             hour_text_str,
