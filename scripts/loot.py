@@ -70,6 +70,7 @@ class Loot():
         pass
 
     def add_item_to_inventory(self, player, item, message_log_func): # Accept message_log_func
-        player.inventory.add_to_stored_items(item)
-        message_log_func(f'You have added a {item.name} to your bag.')
-        message_log_func('') # Add spacing
+        # The inventory's add_to_stored_items method now handles capacity checks and logging.
+        # It returns True if successful, False otherwise.
+        success = player.inventory.add_to_stored_items(item, message_log_func)
+        # message_log_func('') # Spacing is handled by add_to_stored_items or if no item found

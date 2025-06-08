@@ -33,23 +33,22 @@ class World():
         self.current_area = Location() # This defaults to 'Unset'
         self.day_cycle.message_log(f"Hour: {self.day_cycle.hour}") # Log initial hour
 
-        self.area_list = self.builder.build_areas()
-
-        self.set_location('Lastholm')
-        self.camp = 'Lastholm' # Ensure this is also correctly set later, though current_area is the main focus
-        # print(f"DEBUG: After set_location('Lastholm'), current_area is now: {self.current_area.name}")
-
+        # --- Initialize Player and its dependencies FIRST ---
         self.player = Entity()
         # The character creation logic can be a bit tricky. If player is not created until later,
         # its inventory/stats won't be ready immediately.
         # It's better to ensure self.player is fully set up if self.player.update_stats() is called early.
-
         self.enemy_list = self.builder.build_enemies()
-
         self.all_items = self.builder.build_items()
-
         self.player.inventory.set_items(self.all_items)
         self.loot.set_items(self.all_items)
+        # Note: self.player will be further configured by self.create_character() later if called from __main__.py
+
+        # --- Now that player exists, initialize areas and set initial location ---
+        self.area_list = self.builder.build_areas()
+        self.set_location('Lastholm')
+        self.camp = 'Lastholm'
+        # print(f"DEBUG: After set_location('Lastholm'), current_area is now: {self.current_area.name}")
 
         # New state for handling travel flow
         self.in_travel_selection_mode = False
@@ -105,6 +104,10 @@ class World():
                 elif self.current_area.name == 'Magma veins':
                     self.camp = 'Last anvil'
                 found = True
+                # If the new location is a camp, transfer carried items to strongbox
+                if self.current_area.name == self.camp:
+                    self.player.inventory.transfer_carried_to_strongbox(self.append_message)
+                    self.append_message('') # Add spacing
                 # print(f"DEBUG: set_location found '{value}'. current_area set to: {self.current_area.name}")
                 break
         if not found:
@@ -129,6 +132,8 @@ class World():
         self.day_cycle.reset_day() # Use DayCycle to reset time
         self.player.reset_health()
         self.set_location(self.camp)
+        # transfer_carried_to_strongbox will be called by set_location if current_area becomes camp
+        # self.player.inventory.transfer_carried_to_strongbox(self.append_message) # Already handled by set_location
         # Message about resting and new dawn is now handled by DayCycle and set_location/display_current_area
         self.append_message(f"You rested and recovered. You are now at your camp: {self.current_area.name}.")
 
@@ -176,8 +181,16 @@ class World():
         if self.in_loot_decision_mode:
             if choice_text == "Take Item":
                 if self.pending_loot_item:
-                    self.loot.add_item_to_inventory(self.player, self.pending_loot_item, self.append_message)
-                    # add_item_to_inventory already logs and adds spacing
+                    # add_item_to_inventory in loot.py now uses the inventory's capacity-aware method
+                    # It will log success or failure (due to capacity)
+                    self.loot.add_item_to_inventory(self.player, self.pending_loot_item, self.append_message) 
+                self._end_loot_decision_phase()
+                self.display_current_area() # Refresh area description
+                return "area_description"
+            elif choice_text == "Drop Loot": # New option if player can't carry
+                if self.pending_loot_item:
+                    self.append_message(f"You discard the {self.pending_loot_item.name}.")
+                    self.append_message('')
                 self._end_loot_decision_phase()
                 self.display_current_area() # Refresh area description
                 return "area_description"

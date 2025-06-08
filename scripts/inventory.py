@@ -13,6 +13,15 @@ class Inventory():
         self.owned_items = []
         self.all_items = []
         self.income = 0
+        self.strongbox_items = [] # For items stored at camp
+
+        # Define maximum number of *un-equipped* items of each type the player can carry
+        self.carry_capacities = {
+            'weapon': 1,
+            'crafting': 3,
+            'wealth': 5,
+            'trinket': 2
+        }
 
     def set_items(self, value):
         self.all_items = value
@@ -20,10 +29,38 @@ class Inventory():
     def get_items(self):
         return self.all_items
 
-    def add_to_stored_items(self, value):
+    def count_carried_items_by_type(self, item_type_to_count):
+        """Counts how many items of a specific type are currently in stored_items (carried)."""
+        count = 0
+        for item in self.stored_items:
+            if item.type == item_type_to_count:
+                count += 1
+        return count
+
+    def can_carry_item(self, item_to_check):
+        """Checks if the player has capacity to carry one more of the given item's type."""
+        item_type = item_to_check.type
+        if item_type in self.carry_capacities:
+            current_count = self.count_carried_items_by_type(item_type)
+            if current_count < self.carry_capacities[item_type]:
+                return True
+            else:
+                # print(f"DEBUG: Cannot carry more {item_type}. Count: {current_count}, Capacity: {self.carry_capacities[item_type]}")
+                return False
+        return True # Default to true if type has no specific capacity (e.g., quest items later)
+
+    def add_to_stored_items(self, item_to_add, message_log_func=None):
         # print('Attempting to add {}'.format(value.name))
-        self.stored_items.append(value)
-        self.owned_items.append(value)
+        if self.can_carry_item(item_to_add):
+            self.stored_items.append(item_to_add)
+            self.owned_items.append(item_to_add) # Keep track of all items ever owned for loot rule purposes
+            if message_log_func: # Optional logging
+                message_log_func(f"{item_to_add.name} added to your bag.")
+            return True
+        else:
+            if message_log_func: # Optional logging
+                message_log_func(f"You cannot carry any more {item_to_add.type} items.")
+            return False
 
     def equip_item(self, value):
         # print('Attempting to equip {} type {}'.format(value.name, value.type))
@@ -60,6 +97,17 @@ class Inventory():
             self.stored_items.append(self.equipped_items['Body'])
             self.equipped_items['Body'] = None
             print('Stowed {} in bag'.format(value.name))
+
+    def transfer_carried_to_strongbox(self, message_log_func):
+        """Moves all items from stored_items (carried) to strongbox_items."""
+        if not self.stored_items:
+            message_log_func("Your carry bags are already empty.")
+            return
+
+        for item in self.stored_items:
+            self.strongbox_items.append(item)
+        self.stored_items.clear()
+        message_log_func("You've transferred all carried items to your strongbox at camp.")
 
     def open_bag(self):
         # for i in self.stored_items:
