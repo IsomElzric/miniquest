@@ -126,8 +126,8 @@ class Entity():
         if roll <= crit_chance:
             total_damage = (damage * 2) + self.round_up(crit_damage_bonus)
 
-            message_log(f'{self.name} lands a crit for {total_damage} damage!')
-            message_log('') # Add spacing
+            message_log(f'{self.name} lands a mortal wound!')
+            # message_log('') # Add spacing
             
             return total_damage
         else:
