@@ -39,6 +39,11 @@ ASSETS_DIR = os.path.join(PACKAGE_ROOT_DIR, 'assets')
 BACKGROUND_IMAGE = os.path.join(ASSETS_DIR, "art", "background_title.jpg")
 PLACEHOLDER_ART = os.path.join(ASSETS_DIR, "art", "placeholder.jpg") # Make sure this file exists!
 ART_PATH = os.path.join(ASSETS_DIR, "art") # This is a directory path
+ 
+TOP_BANNER_BACKGROUND_IMAGE = os.path.join(ASSETS_DIR, "art", "background_banner_menu.png") # For MenuView top banner
+GAME_VIEW_BANNER_BACKGROUND_IMAGE = os.path.join(ASSETS_DIR, "art", "background_banner_game.png") # For GameView top banner
+MENU_VIEW_RIGHT_PANEL_BACKGROUND_IMAGE = os.path.join(ASSETS_DIR, "art", "background_panel_menu.png") # New for MenuView right panel
+GAME_VIEW_RIGHT_PANEL_BACKGROUND_IMAGE = os.path.join(ASSETS_DIR, "art", "background_panel_menu.png") # New for GameView right panel
 
 # New constants for scrollable text areas
 TEXT_AREA_LINE_HEIGHT = 18  # Pixel height for each line of text, including some padding
@@ -70,6 +75,13 @@ class MenuView(arcade.View):
             print(f"Error: Background image '{BACKGROUND_IMAGE}' not found.")
             print("Please make sure the image file is in the correct path or update the 'BACKGROUND_IMAGE' constant.")
 
+        # Load top banner background
+        self.top_banner_texture = None
+        try:
+            self.top_banner_texture = arcade.load_texture(TOP_BANNER_BACKGROUND_IMAGE)
+        except FileNotFoundError:
+            print(f"Warning: Top banner background image '{TOP_BANNER_BACKGROUND_IMAGE}' not found for MenuView.")
+
         # Load menu button texture (consistent with GameView)
         self.menu_button_texture = None # Initialize
         try:
@@ -77,6 +89,13 @@ class MenuView(arcade.View):
         except FileNotFoundError:
             print(f"ERROR: Menu button image not found at {MENU_BUTTON_IMAGE_PATH} for MenuView")
         
+        # Load right panel background for MenuView
+        self.right_panel_background_texture = None
+        try:
+            self.right_panel_background_texture = arcade.load_texture(MENU_VIEW_RIGHT_PANEL_BACKGROUND_IMAGE)
+        except FileNotFoundError:
+            print(f"Warning: MenuView right panel background image '{MENU_VIEW_RIGHT_PANEL_BACKGROUND_IMAGE}' not found.")
+
         self.menu_buttons = arcade.SpriteList()
         self._create_menu_buttons()
 
@@ -129,13 +148,22 @@ class MenuView(arcade.View):
             )
 
         # --- Draw Top Banner (like GameView) ---
-        arcade.draw_rectangle_filled(
-            SCREEN_WIDTH / 2,
-            SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT / 2,
-            SCREEN_WIDTH,
-            PLAYER_INFO_BANNER_HEIGHT,
-            arcade.color.DARK_SLATE_GRAY # Or a color of your choice
-        )
+        if self.top_banner_texture:
+            arcade.draw_texture_rectangle(
+                SCREEN_WIDTH / 2,
+                SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT / 2,
+                SCREEN_WIDTH,
+                PLAYER_INFO_BANNER_HEIGHT,
+                self.top_banner_texture
+            )
+        else: # Fallback color if texture not loaded
+            arcade.draw_rectangle_filled(
+                SCREEN_WIDTH / 2,
+                SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT / 2,
+                SCREEN_WIDTH,
+                PLAYER_INFO_BANNER_HEIGHT,
+                arcade.color.DARK_SLATE_GRAY 
+            )
         arcade.draw_text(
             "Miniquest",
             SCREEN_WIDTH / 2,
@@ -147,13 +175,22 @@ class MenuView(arcade.View):
         )
 
         # --- Draw Right-Hand Menu Panel ---
-        arcade.draw_rectangle_filled(
-            RIGHT_MENU_X_START + MENU_PANEL_WIDTH / 2,
-            (SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT) / 2, # Centered vertically below banner
-            MENU_PANEL_WIDTH,
-            SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT,
-            arcade.color.DARK_SLATE_GRAY # Match GameView's menu panel
-        )
+        if self.right_panel_background_texture:
+            arcade.draw_texture_rectangle(
+                RIGHT_MENU_X_START + MENU_PANEL_WIDTH / 2,
+                (SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT) / 2,
+                MENU_PANEL_WIDTH,
+                SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT,
+                self.right_panel_background_texture
+            )
+        else: # Fallback color
+            arcade.draw_rectangle_filled(
+                RIGHT_MENU_X_START + MENU_PANEL_WIDTH / 2,
+                (SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT) / 2, 
+                MENU_PANEL_WIDTH,
+                SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT,
+                arcade.color.DARK_SLATE_GRAY 
+            )
 
         # Draw menu buttons and their text
         self.menu_buttons.draw()
@@ -240,6 +277,20 @@ class GameView(arcade.View):
         self.scroll_offset_y = 0.0  # How many pixels the text content has been scrolled up
         self.current_scrollable_lines = [] # Stores the pre-wrapped lines for the current view
         self.scrollable_text_rect_on_screen = None # To store screen coords of the text box for scroll detection
+
+        # Load top banner background
+        self.top_banner_texture = None
+        try:
+            self.top_banner_texture = arcade.load_texture(GAME_VIEW_BANNER_BACKGROUND_IMAGE) # Use GameView specific banner
+        except FileNotFoundError:
+            print(f"Warning: GameView banner background image '{GAME_VIEW_BANNER_BACKGROUND_IMAGE}' not found.")
+
+        # Load right panel background for GameView
+        self.right_panel_background_texture = None
+        try:
+            self.right_panel_background_texture = arcade.load_texture(GAME_VIEW_RIGHT_PANEL_BACKGROUND_IMAGE)
+        except FileNotFoundError:
+            print(f"Warning: GameView right panel background image '{GAME_VIEW_RIGHT_PANEL_BACKGROUND_IMAGE}' not found.")
 
         # For menu buttons with images
         try:
@@ -380,13 +431,22 @@ class GameView(arcade.View):
         self.clear()
 
         # --- Draw Player Info Banner (Top) ---
-        arcade.draw_rectangle_filled(
-            SCREEN_WIDTH / 2,
-            SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT / 2,
-            SCREEN_WIDTH,
-            PLAYER_INFO_BANNER_HEIGHT,
-            arcade.color.DARK_GRAY
-        )
+        if self.top_banner_texture:
+            arcade.draw_texture_rectangle(
+                SCREEN_WIDTH / 2,
+                SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT / 2,
+                SCREEN_WIDTH,
+                PLAYER_INFO_BANNER_HEIGHT,
+                self.top_banner_texture
+            )
+        else: # Fallback color if texture not loaded
+            arcade.draw_rectangle_filled(
+                SCREEN_WIDTH / 2,
+                SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT / 2,
+                SCREEN_WIDTH,
+                PLAYER_INFO_BANNER_HEIGHT,
+                arcade.color.DARK_GRAY
+            )
         # Display player stats
         player_info_y = SCREEN_HEIGHT - TOP_PADDING - (PLAYER_INFO_BANNER_HEIGHT / 2) + 20
         text_color = arcade.color.WHITE
@@ -609,13 +669,22 @@ class GameView(arcade.View):
 
 
         # --- Draw Right-Hand Menu ---
-        arcade.draw_rectangle_filled(
-            RIGHT_MENU_X_START + MENU_PANEL_WIDTH / 2,
-            (SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT) / 2, # Centered vertically below banner
-            MENU_PANEL_WIDTH,
-            SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT,
-            arcade.color.DARK_SLATE_GRAY
-        )
+        if self.right_panel_background_texture:
+            arcade.draw_texture_rectangle(
+                RIGHT_MENU_X_START + MENU_PANEL_WIDTH / 2,
+                (SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT) / 2,
+                MENU_PANEL_WIDTH,
+                SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT,
+                self.right_panel_background_texture
+            )
+        else: # Fallback color
+            arcade.draw_rectangle_filled(
+                RIGHT_MENU_X_START + MENU_PANEL_WIDTH / 2,
+                (SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT) / 2, 
+                MENU_PANEL_WIDTH,
+                SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT,
+                arcade.color.DARK_SLATE_GRAY
+            )
 
         # Menu title
         arcade.draw_text(
