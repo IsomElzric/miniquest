@@ -104,7 +104,8 @@ class Entity():
 
         damage = r.randint(attack_modifier_low, attack_modifier_high)
 
-        message_log.append(f'{self.name} rolled {damage} for damage...') 
+        message_log(f'{self.name} rolled {damage} for damage...')
+        message_log('') # Add spacing
         
         total_damage = self.roll_crit(damage, message_log) 
         return total_damage
@@ -119,16 +120,19 @@ class Entity():
 
         roll = r.randrange(1, 101, 1) - crit_modifier
 
-        message_log.append(f'{self.name} needs a {crit_chance} or less to crit...') 
-        message_log.append(f'{self.name} rolled a {roll} to crit with a modifier of {crit_modifier}...') 
+        message_log(f'{self.name} needs a {crit_chance} or less to crit...')
+        message_log(f'{self.name} rolled a {roll} to crit with a modifier of {crit_modifier}...')
         
         if roll <= crit_chance:
             total_damage = (damage * 2) + self.round_up(crit_damage_bonus)
 
-            message_log.append(f'{self.name} lands a crit for {total_damage} damage!') 
+            message_log(f'{self.name} lands a crit for {total_damage} damage!')
+            message_log('') # Add spacing
             
             return total_damage
         else:
+            message_log(f'{self.name} did not land a critical hit.') # Clarify no crit
+            message_log('') # Add spacing
             return damage
         
     def take_damage(self, damage, message_log, combat=True): 
@@ -139,8 +143,9 @@ class Entity():
             if total_damage < 0:
                 total_damage = 0
             
-            message_log.append(f'{self.name} took {total_damage} damage after {(damage - total_damage)} defense...') 
+            message_log(f'{self.name} took {total_damage} damage after {(damage - total_damage)} defense...')
             
+            message_log('') # Add spacing
             self.current_health -= total_damage
 
     # MODIFIED: Only changed this method to use message_log
