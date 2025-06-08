@@ -221,3 +221,16 @@ class Entity():
             self.attack *= self.level
             self.defense *= self.level
             self.speed *= self.level
+
+    def apply_night_scaling(self, modifier, message_log_func):
+        """Applies a scaling modifier to non-player entities, typically at night."""
+        if not self.is_player and modifier > 1.0:
+            # original_attack = self.attack # Not strictly needed unless logging specific changes
+            # original_defense = self.defense
+            
+            self.attack = self.round_up(self.attack * modifier)
+            self.defense = self.round_up(self.defense * modifier)
+            # Speed could also be modified if desired
+            self.update_stats() # Recalculate max_health, etc., based on new defense
+            
+            message_log_func(f"The encroaching darkness empowers {self.name}!")

@@ -463,7 +463,7 @@ class GameView(arcade.View):
 
         # Name, Level, Time
         arcade.draw_text(
-            f"Name: {self.player.name} | Level: {self.player.level} | Time: {self.world.time} hrs",
+            f"Name: {self.player.name} | Level: {self.player.level}",
             LEFT_PADDING,
             player_info_y,
             text_color,
@@ -492,13 +492,13 @@ class GameView(arcade.View):
 
         # Income / Wealth
         arcade.draw_text(
-            f"Wealth: {self.player.inventory.income}",
+            f"Wealth: {self.player.inventory.income} | Hour: {self.world.day_cycle.hour}",
             int(LEFT_PADDING + (GAME_AREA_WIDTH / 2)),
-            player_info_y - 25,
-            text_color,
+            player_info_y, # Align with Name/Level line
+            time_text_color, # Use conditional color for the whole string part for simplicity
             font_size=font_size,
             anchor_x="left",
-            anchor_y="bottom",
+            anchor_y="center", # Adjusted for better vertical alignment
             width=int((GAME_AREA_WIDTH / 2) - 2 * LEFT_PADDING),
             align="left"
         )
