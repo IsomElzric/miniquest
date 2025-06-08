@@ -415,5 +415,5 @@ class World():
 
     def prepare(self):
         self.append_message("You enter your camp and begin to prepare.")
-        self.player.print_entity(self.append_message)
-        self.append_message("What would you like to do in preparation? (Inventory, Crafting, etc.)")
+        # self.player.print_entity(self.append_message) # Player stats are in the banner
+        # The GUI will now handle displaying inventory options.

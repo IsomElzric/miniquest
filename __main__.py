@@ -269,7 +269,7 @@ class GameView(arcade.View):
         # Initial population of options will happen in on_show_view
         # because the world needs to initialize its state before options are reliable.
 
-        # NEW: Display mode for the main game area
+        # Display mode for the main game area
         self.display_mode = "area_description" # Can be "area_description", "combat_log", "inventory", etc.
         self.log_messages_to_display = [] # List to hold messages retrieved from world.message_log
 
@@ -348,6 +348,9 @@ class GameView(arcade.View):
         elif menu_type == "player_defeated_flee_only": # When player is defeated
             options_text = ["Flee Battle"] # Only option is to flee
             self.current_menu_options = options_text
+        elif menu_type == "inventory_management": # New menu for inventory
+            options_text = ["View Items", "View Equipped", "Back"] # Initial inventory options
+            self.current_menu_options = options_text
         
         # Create button sprites
         # Calculate the Y position for the top of the menu content area (below player banner)
@@ -418,6 +421,14 @@ class GameView(arcade.View):
                                                    replace_whitespace=False, drop_whitespace=False,
                                                    break_long_words=True, break_on_hyphens=True))
         self.current_scrollable_lines = wrapped_lines
+        
+        # If in inventory mode, we might want to populate current_scrollable_lines differently
+        if self.display_mode == "inventory_management":
+            self.current_scrollable_lines.clear() # Clear any previous description/log
+            self.current_scrollable_lines.append("--- Your Inventory ---")
+            if not self.player.inventory.stored_items:
+                self.current_scrollable_lines.append("(Empty)")
+            # We'll add actual item listing here in the next steps
 
     def _prepare_scrollable_text_for_current_mode(self):
         # Calculate the consistent, buffered width for the text area
@@ -428,6 +439,14 @@ class GameView(arcade.View):
             self._prepare_scrollable_text(self.world.current_area.description, TEXT_AREA_FONT_SIZE, consistent_text_area_width)
         elif self.display_mode == "combat_log":
             self._prepare_scrollable_text("\n".join(self.log_messages_to_display), LOG_AREA_FONT_SIZE, consistent_text_area_width)
+        elif self.display_mode == "inventory_management":
+            # For inventory, we'll build the text differently.
+            # This is a placeholder; actual inventory display will be more complex.
+            inventory_text = "--- Your Inventory ---\n\n"
+            if not self.player.inventory.stored_items:
+                inventory_text += "(Your bag is empty.)"
+            # In future steps, we'll iterate through self.player.inventory.stored_items here.
+            self._prepare_scrollable_text(inventory_text, TEXT_AREA_FONT_SIZE, consistent_text_area_width)
 
     def on_show_view(self):
         arcade.set_background_color(arcade.color.GRAY)
@@ -782,6 +801,10 @@ class GameView(arcade.View):
                 elif next_game_state == "player_defeated_must_flee":
                     self.display_mode = "combat_log" # Show defeat messages
                     self.update_menu_options("player_defeated_flee_only") # Show only "Flee Battle"
+                elif next_game_state == "inventory_management": # Player chose "Prepare"
+                    self.display_mode = "inventory_management"
+                    self.update_menu_options("inventory_management")
+                    # _prepare_scrollable_text_for_current_mode will be called below
                 elif next_game_state == "area_description": # Combat ended, or general action
                     self.display_mode = "area_description"
                     self.update_menu_options("main") # Rebuild main action buttons
