@@ -174,11 +174,6 @@ class Entity():
         return rounded
     
     def update_stats(self):
-        if not self.is_player:
-            self.attack *= self.level
-            self.defense *= self.level
-            self.speed *= self.level
-            
         self.health_base = 5 * self.level
         self.max_health = self.health_base + self.round_up(self.defense / 2)
 
