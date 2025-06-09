@@ -448,6 +448,7 @@ class World():
             cloned_enemy.apply_night_scaling(night_modifier, self.append_message)
             cloned_enemy.update_stats() # Update stats after scaling
             # or a specific clone_enemy in Builder that returns an Entity object.
+            cloned_enemy.reset_health() # Ensure current_health is set to the new max_health
             # Assuming Builder.clone_entity handles both or you have a dedicated clone_enemy.
 
             # These messages are appended after cloning the entity

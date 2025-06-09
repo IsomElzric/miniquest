@@ -6,6 +6,7 @@ import arcade
 import os
 import sys
 from collections import Counter # For counting items in inventory display
+from scripts.inventory import EQUIPABLE_TYPES # Import for checking if item is equipable
 import textwrap # For wrapping text into lines
 
 logging.getLogger('arcade').setLevel(logging.INFO)
@@ -296,6 +297,10 @@ class GameView(arcade.View):
         # For item icons
         self.item_icon_textures = {} # Cache for loaded item icon textures
         self.default_item_icon_texture = None
+        self.inventory_item_clickable_sprites = arcade.SpriteList() # For detecting clicks on icons
+        self.selected_inventory_item = None # Holds the Item object selected by clicking its icon
+        self.selected_item_source = None # Holds the source of the selected item (e.g., 'carried', 'strongbox')
+
         self._load_default_item_icon()
 
         self.active_menu_type = "main" # Track the current menu type
@@ -405,6 +410,14 @@ class GameView(arcade.View):
         elif menu_type == "defeat_acknowledged_menu": # New menu after defeat messages are shown at camp
             options_text = ["Get Up"]
             self.current_menu_options = options_text
+        elif menu_type == "item_details_menu": # Menu when an item is selected
+            options_text = []
+            if self.selected_inventory_item and self.selected_inventory_item.type in EQUIPABLE_TYPES:
+                # Check if the item is already equipped in the correct slot or if it's a trinket and max are equipped
+                # For simplicity now, always show Equip if equipable. Inventory.equip_item handles logic.
+                options_text.append("Equip")
+            options_text.append("Back to Inventory")
+            self.current_menu_options = options_text
         
         # Create button sprites
         # Calculate the Y position for the top of the menu content area (below player banner)
@@ -497,6 +510,15 @@ class GameView(arcade.View):
             # else:
             #     self.current_scrollable_lines.clear()
             # For now, titles will be drawn directly in on_draw for these modes.
+            pass # No complex text prep needed, on_draw handles icon display
+        elif self.display_mode == "item_details_display":
+            self.current_scrollable_lines.clear()
+            self.scroll_offset_y = 0.0
+            if self.selected_inventory_item:
+                details_text = f"--- {self.selected_inventory_item.name} ---\n"
+                details_text += f"Type: {self.selected_inventory_item.type}\n\n"
+                details_text += f"Description:\n{self.selected_inventory_item.description}"
+                self._prepare_scrollable_text(details_text, TEXT_AREA_FONT_SIZE, consistent_text_area_width)
             pass # No complex text prep needed, on_draw handles icon display
 
     def on_show_view(self):
@@ -750,6 +772,7 @@ class GameView(arcade.View):
         elif self.display_mode == "inventory_management":
             # --- Draw Icon-Based Inventory for "Prepare" menu ---
             current_draw_y = _scroll_area_top_y_for_lines # Start drawing from the top of the defined area
+            self.inventory_item_clickable_sprites.clear() # Clear old clickable sprites
             
             # Helper function to draw an item section
             def draw_item_section(title, items_list_or_dict, is_dict_of_items=False, is_list_of_dicts=False):
@@ -757,36 +780,68 @@ class GameView(arcade.View):
                 arcade.draw_text(title, description_x, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE + 2, bold=True, anchor_y="top")
                 current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_SECTION_SPACING / 2)
 
-                items_to_draw = []
+                # Collect items with their source for creating clickable sprites
+                items_with_source_info = []
                 if is_dict_of_items: # For equipped_items
                     for slot, item_obj in items_list_or_dict.items():
                         if isinstance(item_obj, list): # Trinkets
                             for trinket in item_obj:
-                                if trinket: items_to_draw.append(trinket)
+                                if trinket: items_with_source_info.append({'item': trinket, 'source': f'equipped_{slot.lower()}'})
                         elif item_obj:
-                            items_to_draw.append(item_obj)
+                            items_with_source_info.append({'item': item_obj, 'source': f'equipped_{slot.lower()}'})
                 elif is_list_of_dicts: # For available_items_to_equip
                      for item_info in items_list_or_dict:
-                         items_to_draw.append(item_info['item']) # Assuming item_info has 'item' key
+                         items_with_source_info.append({'item': item_info['item'], 'source': item_info.get('source', 'unknown')})
                 else: # For stored_items, strongbox_items (lists of item objects)
-                    items_to_draw = items_list_or_dict
-
-                if not items_to_draw:
+                    current_source_name = "unknown"
+                    if items_list_or_dict is self.player.inventory.stored_items:
+                        current_source_name = "carried"
+                    elif items_list_or_dict is self.player.inventory.strongbox_items:
+                        current_source_name = "strongbox"
+                    
+                    # Use Counter to group items by name for display counts
+                    item_name_counts = Counter(item.name for item in items_list_or_dict)
+                    
+                    # Create unique entries for items_with_source_info, including their counts
+                    processed_item_names = set()
+                    for item_obj in items_list_or_dict: # Iterate through the original list to get item objects
+                        if item_obj.name not in processed_item_names:
+                            items_with_source_info.append({
+                                'item': item_obj, 
+                                'source': current_source_name, 
+                                'count': item_name_counts[item_obj.name]})
+                            processed_item_names.add(item_obj.name)
+                
+                if not items_with_source_info:
                     arcade.draw_text("(Empty)", description_x + ITEM_ICON_DRAW_SIZE[0] + 10, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
                     current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_ICON_VERTICAL_SPACING)
                 else:
-                    for item in items_to_draw:
+                    for current_item_info in items_with_source_info: # Iterate over the populated list
+                        item = current_item_info['item'] # Extract the item object
                         icon_texture = self._get_item_icon_texture(item)
                         if icon_texture:
                             arcade.draw_texture_rectangle(description_x + ITEM_ICON_DRAW_SIZE[0] / 2, 
-                                                          current_draw_y - ITEM_ICON_DRAW_SIZE[1] / 2, 
+                                                          current_draw_y - ITEM_ICON_DRAW_SIZE[1] / 2, # Center icon vertically
                                                           ITEM_ICON_DRAW_SIZE[0], ITEM_ICON_DRAW_SIZE[1], 
                                                           icon_texture)
                         
+                        # Create a clickable sprite (can be invisible or a simple rect for debugging)
+                        clickable_sprite = arcade.SpriteSolidColor(ITEM_ICON_DRAW_SIZE[0], ITEM_ICON_DRAW_SIZE[1], (0,0,0,0)) # Invisible
+                        clickable_sprite.center_x = description_x + ITEM_ICON_DRAW_SIZE[0] / 2
+                        clickable_sprite.center_y = current_draw_y - ITEM_ICON_DRAW_SIZE[1] / 2
+                        clickable_sprite.properties['item_object'] = item
+                        clickable_sprite.properties['item_source'] = current_item_info['source'] # Use source from current_item_info
+                        self.inventory_item_clickable_sprites.append(clickable_sprite)
+
                         item_display_name = f"{item.name} ({item.type})"
+                        item_count = current_item_info.get('count') # Get the count
+                        if item_count and item_count > 1:
+                            item_display_name += f" x{item_count}"
                         # Add quantity for stackable items if applicable (e.g. from Counter)
                         # For now, just name and type.
-                        arcade.draw_text(item_display_name, description_x + ITEM_TEXT_OFFSET_X, current_draw_y, 
+                        # Adjust text Y to align with top of icon, or center of icon row
+                        text_draw_y = current_draw_y - (ITEM_ICON_DRAW_SIZE[1] / 2) + (TEXT_AREA_LINE_HEIGHT / 2) - 4 # Try to center with icon
+                        arcade.draw_text(item_display_name, description_x + ITEM_TEXT_OFFSET_X, text_draw_y, # Use text_draw_y
                                           _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
                         current_draw_y -= (max(ITEM_ICON_DRAW_SIZE[1], TEXT_AREA_LINE_HEIGHT) + ITEM_ICON_VERTICAL_SPACING)
                 current_draw_y -= ITEM_SECTION_SPACING # Space before next section
@@ -795,19 +850,26 @@ class GameView(arcade.View):
             draw_item_section("== Carried Items (Bags) ==", self.player.inventory.stored_items)
             draw_item_section("== Strongbox (Camp) ==", self.player.inventory.strongbox_items)
 
-        elif self.display_mode == "view_bags":
+        elif self.display_mode == "view_bags" or self.display_mode == "select_item_to_equip_display" or self.display_mode == "item_details_display":
             # Similar to inventory_management, but only equipped and carried
             # (Implementation can be added here, copying structure from "inventory_management")
-            # For now, let it fall through to default text drawing if any text was prepared
+            # For these modes, if they have text content, draw it.
+            # Icon drawing for these modes will be added if/when they become icon-based.
+            # For "item_details_display", text is already prepared.
             if self.current_scrollable_lines: # Fallback to text if any was prepared
-                 # ... (copy common scrollable text drawing logic here if needed for fallback) ...
-                 pass
-
-        elif self.display_mode == "select_item_to_equip_display":
-            # This will also become icon-based. For now, let it use text if prepared.
-            if self.current_scrollable_lines: # Fallback to text
-                 # ... (copy common scrollable text drawing logic here if needed for fallback) ...
-                 pass
+                # Re-use the common scrollable text drawing logic from above
+                first_visible_line_idx = int(self.scroll_offset_y / TEXT_AREA_LINE_HEIGHT)
+                lines_in_view = int(_scroll_area_height_for_lines / TEXT_AREA_LINE_HEIGHT)
+                for i in range(len(self.current_scrollable_lines)):
+                    if i < first_visible_line_idx: continue
+                    if i > first_visible_line_idx + lines_in_view + 1: break
+                    line_text_content = self.current_scrollable_lines[i]
+                    line_y_offset_from_content_top = i * TEXT_AREA_LINE_HEIGHT
+                    draw_y_on_screen = _scroll_area_top_y_for_lines - (line_y_offset_from_content_top - self.scroll_offset_y)
+                    if draw_y_on_screen <= _scroll_area_top_y_for_lines and \
+                       draw_y_on_screen >= _scroll_area_top_y_for_lines - _scroll_area_height_for_lines - TEXT_AREA_LINE_HEIGHT:
+                        arcade.draw_text(line_text_content, description_x, draw_y_on_screen, _text_color_for_mode,
+                                          font_size=_line_font_size, width=description_width, anchor_x="left", anchor_y="top")
 
         # --- Draw Right-Hand Menu ---
         if self.right_panel_background_texture:
@@ -914,6 +976,37 @@ class GameView(arcade.View):
                     self.world.available_items_to_equip.clear() # Clear the list in world
                     return # Handled locally
 
+                elif command == "Back to Inventory" and self.active_menu_type == "item_details_menu":
+                    self.selected_inventory_item = None # Deselect item
+                    self.display_mode = "inventory_management" # Go back to the main inventory view
+                    self.update_menu_options("inventory_management")
+                    self.log_messages_to_display.clear()
+                    # _prepare_scrollable_text_for_current_mode will be called below,
+                    # which for inventory_management now just clears lines as it's icon-based.
+                    # The on_draw method will redraw the icons.
+                    self._prepare_scrollable_text_for_current_mode()
+                    return # Handled locally
+
+                elif command == "Equip" and self.active_menu_type == "item_details_menu":
+                    if self.selected_inventory_item and self.selected_item_source:
+                        # Directly call the player's equip method
+                        success = self.player.equip_item_from_storage(
+                            self.selected_inventory_item,
+                            self.selected_item_source,
+                            self.world.append_message # Pass the world's logger
+                        )
+                        # Regardless of success, go back to inventory view and refresh
+                        self.selected_inventory_item = None
+                        self.selected_item_source = None
+                        
+                        # Directly set the next state to stay in inventory management
+                        self.display_mode = "inventory_management"
+                        self.update_menu_options("inventory_management")
+                        self.log_messages_to_display.clear() # Clear old item details text
+                        self.log_messages_to_display.extend(self.world.get_messages()) # Get equip success/fail messages
+                        self._prepare_scrollable_text_for_current_mode() # Prepares for icon view (clears lines)
+                        return # Crucial: prevent fall-through to world.handle_player_choice
+
                 elif command == "Check Bags":
                     self.pre_bags_view_mode = self.display_mode
                     self.pre_bags_menu_type = self.active_menu_type # Use stored active_menu_type
@@ -999,9 +1092,24 @@ class GameView(arcade.View):
                 return # Exit after processing a button click
 
         else: # Click was outside the menu area (e.g., in the main game art area)
-            # Clicks outside the right-hand menu should not trigger game state changes.
-            # The player must use the buttons in the menu to proceed.
-            pass
+            # Check for clicks on item icons if in relevant display mode
+            if self.display_mode == "inventory_management": # Or other modes where icons are shown
+                clicked_item_sprites = arcade.get_sprites_at_point((x,y), self.inventory_item_clickable_sprites)
+                if clicked_item_sprites:
+                    clicked_item_sprite = clicked_item_sprites[0]
+                    self.selected_inventory_item = clicked_item_sprite.properties.get('item_object')
+                    self.selected_item_source = clicked_item_sprite.properties.get('item_source') 
+                    print(f"Selected item source: {self.selected_item_source}")
+                    
+                    if self.selected_inventory_item:
+                        print(f"Clicked on item: {self.selected_inventory_item.name}")
+                        self.display_mode = "item_details_display"
+                        self.update_menu_options("item_details_menu")
+                        self.log_messages_to_display.clear() # Clear previous log/description
+                        self._prepare_scrollable_text_for_current_mode() # Prepare item details text
+                        return # Handled click on item icon
+            # If not an icon click, then clicks outside the right-hand menu do nothing.
+
     def on_update(self, delta_time: float):
         """ Called every frame to update game logic. """
         self.player.update_stats()

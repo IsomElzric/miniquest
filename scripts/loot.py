@@ -32,27 +32,19 @@ class Loot():
             # print('Chose {} from drop pool'.format(choice.name))
             # print('Checking type {} against type rules'.format(choice.type))
 
-            if choice.type in ['weapon', 'armor']:
-                # print('Choice follows weapon and armor rules')
-                if choice not in player.inventory.owned_items:
-                    # print('Player does not already own {}'.format(choice.name))
-                    drop = choice
-                    break
-                else: 
-                    # print('Player already owns {}'.format(choice.name))
-                    checked.remove(choice)
-            
-            elif choice.type == 'trinket':
+            if choice.type == 'trinket':
                 # print('Choice follows trinket rules')
                 if choice not in player.inventory.owned_items:
                     # print('Player does not already own {}'.format(choice.name))
                     drop = choice
                     break
                 else:
-                    # print('Player already owns {}'.format(choice.name))
+                    # Player already owns this trinket, remove from current consideration
+                    # print(f'Player already owns trinket {choice.name}, removing from checked pool for this roll.')
                     checked.remove(choice)
-
-            elif choice.type in ['crafting', 'wealth']:
+            elif choice.type in ['weapon', 'armor', 'crafting', 'wealth']:
+                # Weapons, armor, crafting, and wealth items can drop multiple times.
+                # No uniqueness check against owned_items for these types.
                 # print('Choice follows crafting and wealth rules')
                 drop = choice
                 break

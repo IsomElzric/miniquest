@@ -67,7 +67,7 @@ class Inventory():
         Equips an item. If an item is already in the slot, it's moved to the strongbox.
         item_to_equip: The item object to equip.
         source_location_name: String 'carried' or 'strongbox' indicating where the item comes from.
-                              Defaults to 'carried' if None.
+                              Defaults to 'carried' if None. (The old `equip_item` effectively assumed 'carried')
         message_log_func: Function to log messages.
         Returns True if successful, False otherwise.
         """
@@ -90,6 +90,7 @@ class Inventory():
             return False
 
         slot_to_equip = None
+        # Determine the slot based on item type
         if item_to_equip.type == 'weapon': slot_to_equip = 'Held'
         elif item_to_equip.type == 'armor': slot_to_equip = 'Body'
         elif item_to_equip.type == 'trinket': slot_to_equip = 'Trinkets'
@@ -98,25 +99,34 @@ class Inventory():
         if slot_to_equip == 'Held' or slot_to_equip == 'Body':
             currently_equipped = self.equipped_items[slot_to_equip]
             if currently_equipped:
+                message_log_func(f"Unequipping {currently_equipped.name} from {slot_to_equip} slot.")
                 self.strongbox_items.append(currently_equipped) # Move old item to strongbox
                 message_log_func(f"{currently_equipped.name} moved to strongbox.")
                 self.equipped_items[slot_to_equip] = None
             self.equipped_items[slot_to_equip] = item_to_equip
+            message_log_func(f"Equipped {item_to_equip.name} in {slot_to_equip} slot.")
         elif slot_to_equip == 'Trinkets':
-            # Basic trinket equipping: assumes fixed number of slots (e.g., 2)
-            # For simplicity, let's assume we can always equip if we have space, or replace the first one.
-            # A more robust system would allow choosing which trinket to replace if slots are full.
             MAX_TRINKETS = 2 # Example limit
             if len(self.equipped_items['Trinkets']) >= MAX_TRINKETS:
                 old_trinket = self.equipped_items['Trinkets'].pop(0) # Remove the oldest
                 self.strongbox_items.append(old_trinket)
-                message_log_func(f"Replaced {old_trinket.name} (Trinket) with {item_to_equip.name}. {old_trinket.name} moved to strongbox.")
+                message_log_func(f"Trinket slots full. Unequipping oldest trinket: {old_trinket.name}.")
+                message_log_func(f"{old_trinket.name} moved to strongbox.")
             self.equipped_items['Trinkets'].append(item_to_equip)
+            message_log_func(f"Equipped {item_to_equip.name} as a trinket.")
                 
-        # Remove item from its original source list
-        source_list.remove(item_to_equip)
-        
-        message_log_func(f"Equipped {item_to_equip.name} ({item_to_equip.type}).")
+        # Remove item from its original source list (carried or strongbox)
+        try:
+            source_list.remove(item_to_equip)
+        except ValueError:
+             message_log_func(f"Warning: Could not remove {item_to_equip.name} from {source_location_name} list during equip.")
+
+        # Add logging to show list contents after the operation
+        message_log_func("--- Inventory State After Equip ---")
+        message_log_func(f"Equipped: {self.equipped_items}") # Shows object representations
+        message_log_func(f"Carried: {[item.name for item in self.stored_items]}")
+        message_log_func(f"Strongbox: {[item.name for item in self.strongbox_items]}")
+        message_log_func("---------------------------------")
         message_log_func("") # Spacing
         return True
 
