@@ -11,6 +11,7 @@ class Item(ABC):
         self._type = ''
         self.ammount = 1
         self.icon_filename: str | None = None # New attribute for the icon's filename, explicitly typed
+        self.icon_subfolder: str | None = None # New attribute for the icon's subfolder (e.g., "generic", "aethelwood")
         
         self._stat_modifiers = {}
         self.damage = 0

@@ -151,6 +151,12 @@ class Builder():
                             stat_modifiers = {}
                             location = []
                             icon_filename = None # Initialize icon filename
+                            icon_subfolder = None # Initialize icon subfolder
+
+                            # Determine the icon_subfolder from the dirpath
+                            relative_dirpath = os.path.relpath(dirpath, ITEM_PATH)
+                            if relative_dirpath and relative_dirpath != '.': # Ensure it's a subfolder
+                                icon_subfolder = os.path.basename(relative_dirpath) # Get the last part of the path (subfolder name)
                             worth = 0
                             for i, line in enumerate(file):
                                 if i == 0:
@@ -179,6 +185,7 @@ class Builder():
                             item.description = description
                             item.spawn_location = location
                             item.icon_filename = icon_filename # Set the icon filename
+                            item.icon_subfolder = icon_subfolder # Set the icon subfolder
                             
                             if item_type == 'wealth':
                                 item.worth = worth
