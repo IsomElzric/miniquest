@@ -2,4 +2,5 @@ weapon
 {'damage': 3, 'mitigation': 3, 'finesse': 4}
 ['Temple district']
 high_priest's_scepter.png
+An ornate, gnarled walking stick, once a symbol of authority, now twisted and warped.
 Its weighted, iron-shod end contains a hidden, almost imperceptible lead core.

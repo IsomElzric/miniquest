@@ -2,4 +2,5 @@ crafting
 {'damage': 0, 'mitigation': 1, 'finesse': 0}
 []
 roughwood.png
+Splintered planks from abandoned structures, gnarled branches, or the twisted trunks of dead shrubs.
 Often knotty and unyielding.

@@ -2,4 +2,5 @@ weapon
 {'damage': 8, 'mitigation': 5, 'finesse': 10}
 ['Choking crevasse']
 void-tooth_dagger.png
+A jagged dagger crafted from the tooth or claw of a creature found within the mountain's deepest chasms. 
 It feels unnaturally cold to the touch.

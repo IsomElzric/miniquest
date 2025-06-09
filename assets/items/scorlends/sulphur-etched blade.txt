@@ -2,4 +2,5 @@ weapon
 {'damage': 7, 'mitigation': 5, 'finesse': 3}
 ['Sulphur wastes']
 sulphur-etched_blade.png
+A crudely forged blade, its surface pitted and stained a sickly yellow-orange from prolonged exposure to volcanic gases.
 It constantly gives off a faint, acrid vapor.

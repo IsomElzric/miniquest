@@ -2,4 +2,5 @@ crafting
 {'damage': 1, 'mitigation': 1, 'finesse': 0}
 ['Temple district']
 spirit-wisp_dust.png
+A fine, ethereal powder collected from the remnants of dispersed spectral entities.
 It shimmers faintly with residual psychic energy and feels unnervingly cold.

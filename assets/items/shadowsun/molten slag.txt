@@ -2,4 +2,5 @@ crafting
 {'damage': 2, 'mitigation': 4, 'finesse': 0}
 ['Magma veins']
 molten_slag.png
+Cooling, yet still warm and slightly pliable, slag from fresh lava flows.
 It's incredibly dense and emits a faint, unsettling heat.

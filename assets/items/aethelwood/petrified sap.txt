@@ -2,4 +2,5 @@ crafting
 {'damage': 0, 'mitigation': 1, 'finesse': 3}
 ['Petrified grove']
 petrified_sap.png
+Hardened, glassy sap from a petrified tree, resembling dark amber.
 It retains a faint, cold magical energy and resonates with subtle echoes.

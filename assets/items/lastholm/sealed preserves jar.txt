@@ -2,4 +2,5 @@ wealth
 5
 ['Shattered market quarter', 'Shadowed residential blocks']
 sealed_preserves_jar.png
+A small, hermetically sealed glass jar, miraculously unbroken, containing unidentifiable but seemingly intact preserved food from before the cataclysm.
 It might be a pickle, a fruit, or something much stranger.

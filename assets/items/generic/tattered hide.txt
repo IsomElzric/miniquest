@@ -2,4 +2,5 @@ crafting
 {'damage': 0, 'mitigation': 1, 'finesse': 1}
 []
 tattered_hide.png
+Sun-bleached, brittle, or waterlogged pieces of various animal hides.
 Often stiff and difficult to work with, it smells faintly of decay.

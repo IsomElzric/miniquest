@@ -2,4 +2,5 @@ trinket
 {'attack': 0, 'defense': 1, 'speed': 0}
 []
 survivor's_tooth.png
+A large, discolored tooth from an unknown beast, filed down and strung onto a rough leather cord.
 It feels dense and sharp.

@@ -2,3 +2,4 @@ weapon
 {'damage': 2, 'mitigation': 2, 'finesse': 1}
 []
 makeshift_spear.png
+A length of broken pipe, a discarded tool handle, or sturdy branch, tipped with a sharpened rock or piece of metal.

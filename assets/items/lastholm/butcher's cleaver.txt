@@ -2,4 +2,5 @@ weapon
 {'damage': 4, 'mitigation': 2, 'finesse': 7}
 ['Shattered market quarter']
 butcher's_cleaver.png
+A heavy, wide blade, stained with centuries of dark, unidentifiable residues that cling to its surface.
 It hums faintly with a cold, sickly energy.

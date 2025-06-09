@@ -78,10 +78,17 @@ def update_all_item_icon_paths():
                         print(f"Warning: File {filepath} has fewer than 3 lines. Skipping icon update.")
                         continue
                     
-                    if len(lines) == 3: # File has type, stats, location, but no icon line yet
-                        lines.append(icon_filename_generated)
-                    else: # File has 4 or more lines, update the 4th line (index 3)
-                        lines[3] = icon_filename_generated
+                    # Logic to insert or update the icon filename at index 3 (4th line)
+                    if len(lines) == 3:
+                        # File has type, stats, location. Icon line is missing. Add it.
+                        lines.insert(3, icon_filename_generated)
+                    elif len(lines) > 3:
+                        # File has 4 or more lines. Check if line 4 is already an icon.
+                        if lines[3].lower().endswith((".png", ".jpg", ".jpeg", ".gif")): # Check for common image extensions
+                            lines[3] = icon_filename_generated # Update existing icon line
+                        else:
+                            lines.insert(3, icon_filename_generated) # Insert new icon line, push description down
+                    # If len(lines) < 3, it's handled by the continue above.
                     
                     with open(filepath, "w") as file:
                         for line in lines:

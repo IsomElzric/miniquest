@@ -2,4 +2,5 @@ wealth
 3
 []
 pre-cataclysmic_glass_shards.png
+Fragments of old, colored glass from bottles, windows, or intricate ornaments.
 They retain their luster and unique hue, standing out against the bleak landscape.

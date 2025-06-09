@@ -1,4 +1,4 @@
-['Choaked oasis', 'Scavenger\'s ridge']
+['Choked oasis', 'Scavenger\'s ridge']
 ['Rock-hound', 'Dust-wight']
 The relatively flat, broken ground gives way abruptly. 
 Before you, the landscape erupts into a series of impossibly sharp, glass-like formations. 

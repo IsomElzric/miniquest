@@ -2,4 +2,5 @@ wealth
 10
 ['Choking crevasse']
 void-pearl.png
+A perfectly smooth, unnaturally cold, black orb, found rarely in the deepest chasms of the mountain.
 It seems to absorb all light, making it difficult to discern its true shape in the hand.

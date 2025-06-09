@@ -2,3 +2,4 @@ weapon
 {'damage': 1, 'mitigation': 0, 'finesse': 5}
 []
 rusted_shiv.png
+A shard of scavenged metal or bone, crudely sharpened.

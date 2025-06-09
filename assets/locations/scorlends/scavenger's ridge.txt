@@ -1,4 +1,4 @@
-['Obsidian spires', 'Choaked oasis']
+['Obsidian spires', 'Choked oasis']
 ['Ash-runner', 'Rock-hound']
 The vast, flat desolation gives way to a series of craggy, sun-baked ridges and narrow, winding paths. 
 This is the Scavenger's Ridge, a maze of perilous trails that offer both higher ground and treacherous footing. 

@@ -2,4 +2,5 @@ wealth
 20
 ['Obsidian throne']
 tyrant's_vein_stone.png
+A piece of dark, heavy rock, riddled with fine, pulsating red lines, as if a network of blood vessels flows just beneath its surface.
 It resonates with a faint, malevolent hum.

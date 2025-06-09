@@ -2,4 +2,5 @@ wealth
 5
 ["Scavenger/'s ridge", 'Ash-choked ruins']
 desert_glass_beads.png
+Small, smooth, heat-fused beads of sand and volcanic ash, formed naturally by intense local heat during the cataclysm.
 They come in various dull, earthy colors.

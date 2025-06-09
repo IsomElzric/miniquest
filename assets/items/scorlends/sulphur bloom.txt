@@ -2,4 +2,5 @@ wealth
 7
 ['Sulphur wastes']
 sulphur_bloom.png
+A delicate, intricate formation of pure, crystallized sulfur, surprisingly fragile but intensely colored in hues of yellow, orange, and red.
 It smells sharply of brimstone.

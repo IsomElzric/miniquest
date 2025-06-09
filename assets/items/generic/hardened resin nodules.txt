@@ -2,4 +2,5 @@ wealth
 3
 []
 hardened_resin_nodules.png
+Small, translucent lumps of incredibly tough, petrified tree sap or crystalline mineral formations.
 They are resistant to decay and can be surprisingly dense.
