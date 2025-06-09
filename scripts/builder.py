@@ -18,7 +18,7 @@ ENEMY_PATH = os.path.join(ASSETS_DIR, 'enemies')
 ITEM_PATH = os.path.join(ASSETS_DIR, 'items')
 
 class Builder():
-    def __init__(self, message_log) -> None: # Accept message_log here
+    def __init__(self, message_log) -> None:  # Accept message_log here
         self.player = Entity()
         self.message_log = message_log # Store message_log
 
@@ -150,6 +150,7 @@ class Builder():
                             description = []
                             stat_modifiers = {}
                             location = []
+                            icon_filename = None # Initialize icon filename
                             worth = 0
                             for i, line in enumerate(file):
                                 if i == 0:
@@ -167,14 +168,17 @@ class Builder():
                                         location = ['global']
                                     else:
                                         location = check
+                                elif i == 3: # Expect icon filename on the 4th line (index 3)
+                                    icon_filename = line.strip()
                                 else:
-                                    description.append(line.strip())
+                                    description.append(line.strip()) # Description now starts from 5th line (index 4)
                             
                             item = Item()
                             item.name = name
                             item.type = item_type
                             item.description = description
                             item.spawn_location = location
+                            item.icon_filename = icon_filename # Set the icon filename
                             
                             if item_type == 'wealth':
                                 item.worth = worth

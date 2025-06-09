@@ -1,5 +1,5 @@
 wealth
 3
 ['Sewers', 'Temple district']
-Small, flat metallic or crystalline plates, intricately etched with indecipherable symbols, complex diagrams, or even faint, glowing patterns
+corroded_data-plates.png
 Remnants of forgotten information storage from Lastholm's zenith.

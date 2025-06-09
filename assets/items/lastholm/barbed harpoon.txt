@@ -1,5 +1,5 @@
 weapon
 {'damage': 5, 'mitigation': 2, 'finesse': 6}
 ['Sewers']
-A long, rust-eaten spear with vicious, curved barbs on its tip, designed to prevent escape. 
+barbed_harpoon.png
 Its rope is long since rotted away, but the head remains menacing.

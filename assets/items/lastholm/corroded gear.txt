@@ -1,5 +1,5 @@
 crafting
 {'damage': 0, 'mitigation': 1, 'finesse': 2}
 ['Sewers']
-Intricate but heavily corroded clockwork components, springs, and gears salvaged from Lastholm's lost machinery
+corroded_gear.png
 They sometimes twitch or hum faintly.

@@ -1,5 +1,5 @@
 wealth
 5
 ['Mire of silent reflections']
-A handful of vibrant, bioluminescent moss that subtly changes color and pattern when observed closely, especially in low light
+shifting_moss_cluster.png
 Its eerie glow casts unsettling shadows.

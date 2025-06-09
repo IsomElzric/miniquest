@@ -1,5 +1,5 @@
 weapon
 {'damage': 12, 'mitigation': 7, 'finesse': 5}
 ['Obsidian throne']
-A massive, wicked axe, crudely but powerfully forged. 
+obsidian_heart_axe.png
 Its black obsidian head seems to have a faintly pulsing, internal red glow, as if containing a fragment of the mountain's wrath.

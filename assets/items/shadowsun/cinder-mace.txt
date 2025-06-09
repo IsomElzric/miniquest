@@ -1,5 +1,5 @@
 weapon
 {'damage': 9, 'mitigation': 6, 'finesse': 4}
 ['Magma veins']
-A brutal, heavy mace fashioned from fused volcanic rock and metal, still radiating uncomfortable heat. 
+cinder-mace.png
 Its surface is rough and incandescent.

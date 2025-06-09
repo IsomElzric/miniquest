@@ -10,6 +10,7 @@ class Item(ABC):
         self._description = ''
         self._type = ''
         self.ammount = 1
+        self.icon_filename: str | None = None # New attribute for the icon's filename, explicitly typed
         
         self._stat_modifiers = {}
         self.damage = 0

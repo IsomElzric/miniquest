@@ -1,5 +1,5 @@
 crafting
 {'damage': 0, 'mitigation': 3, 'finesse': 0}
 ['Ash-blasted scar', 'Ash-choked ruins']
-Compressed, dense clumps of volcanic ash, surprisingly tough and abrasive
+hardened_ash.png
 It feels like fine concrete.

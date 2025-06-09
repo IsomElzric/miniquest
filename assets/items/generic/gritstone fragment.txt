@@ -1,5 +1,5 @@
 trinket
 {'attack': 0, 'defense': 0, 'speed': 1}
 []
-A piece of dense, sharp volcanic rock, small enough to hold in your palm
+gritstone_fragment.png
 Its rough texture provides surprising grip.

@@ -1,5 +1,5 @@
 crafting
 {'damage': 1, 'mitigation': 2, 'finesse': 0}
 ['Whispering thicket', 'Sunken watchtower']
-A piece of gnarled wood from the Aethelwood that faintly carries whispers or unsettling, distorted echoes when held to the ear
+echo-wood.png
 It feels strangely warm.

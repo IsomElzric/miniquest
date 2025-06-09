@@ -1,5 +1,5 @@
 trinket
 {'attack': 2, 'defense': 0, 'speed': 0}
 ['Shattered market quarter']
-A desiccated, incredibly sharp claw from a particularly old or large Ghast-Scavenger
+carrion-talon.png
 It feels unnervingly light but holds a cutting edge.

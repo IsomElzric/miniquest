@@ -1,4 +1,4 @@
 crafting
 {'damage': 3, 'mitigation': 1, 'finesse': 0}
 ['Grove of hungering vines']
-A razor-sharp, dark, and impossibly tough thorn, still subtly flexing as if alive, even after being removed from the vine.
+living_thorn.png

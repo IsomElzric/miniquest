@@ -1,5 +1,5 @@
 weapon
 {'damage': 3, 'mitigation': 2, 'finesse': 7}
 ['Petrified grove']
-A knife crafted from a razor-sharp shard of the Aethelwood's petrified wood or bone, unnaturally hard and brittle. 
+petrified_shiv.png
 It rings with a faint, crystalline hum when struck.

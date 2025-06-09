@@ -1,4 +1,4 @@
 weapon
 {'damage': 3, 'mitigation': 0, 'finesse': -2}
 []
-A heavy piece of wood, often with a few nails or stones crudely hammered in.
+splintered_club.png

@@ -35,16 +35,20 @@ RIGHT_MENU_X_START = GAME_AREA_WIDTH # X-coordinate where the right menu begins
 # Determine the absolute path to the 'miniquest' package directory (where __main__.py resides)
 PACKAGE_ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(PACKAGE_ROOT_DIR, 'assets')
-
-# New: Placeholder art for locations without specific images
-BACKGROUND_IMAGE = os.path.join(ASSETS_DIR, "art", "background_title.jpg")
-PLACEHOLDER_ART = os.path.join(ASSETS_DIR, "art", "placeholder.jpg") # Make sure this file exists!
-ART_PATH = os.path.join(ASSETS_DIR, "art") # This is a directory path
+ART_BASE_PATH = os.path.join(ASSETS_DIR, "art") # Base path for all art
  
-TOP_BANNER_BACKGROUND_IMAGE = os.path.join(ASSETS_DIR, "art", "background_banner_menu.png") # For MenuView top banner
-GAME_VIEW_BANNER_BACKGROUND_IMAGE = os.path.join(ASSETS_DIR, "art", "background_banner_game.png") # For GameView top banner
-MENU_VIEW_RIGHT_PANEL_BACKGROUND_IMAGE = os.path.join(ASSETS_DIR, "art", "background_panel_menu.png") # New for MenuView right panel
-GAME_VIEW_RIGHT_PANEL_BACKGROUND_IMAGE = os.path.join(ASSETS_DIR, "art", "background_panel_menu.png") # New for GameView right panel
+# New structured art paths
+UI_ART_PATH = os.path.join(ART_BASE_PATH, "ui")
+LOCATION_ART_PATH = os.path.join(ART_BASE_PATH, "location")
+ITEM_ICON_ART_PATH = os.path.join(ART_BASE_PATH, "item_icons") # For future use when displaying icons
+
+BACKGROUND_IMAGE = os.path.join(UI_ART_PATH, "background_title.jpg")
+PLACEHOLDER_ART = os.path.join(LOCATION_ART_PATH, "placeholder.jpg") # Make sure this file exists in the new location folder!
+ 
+TOP_BANNER_BACKGROUND_IMAGE = os.path.join(UI_ART_PATH, "background_banner_menu.png")
+GAME_VIEW_BANNER_BACKGROUND_IMAGE = os.path.join(UI_ART_PATH, "background_banner_game.png")
+MENU_VIEW_RIGHT_PANEL_BACKGROUND_IMAGE = os.path.join(UI_ART_PATH, "background_panel_menu.png")
+GAME_VIEW_RIGHT_PANEL_BACKGROUND_IMAGE = os.path.join(UI_ART_PATH, "background_panel_menu.png") # Assuming same as menu for now
 
 # New constants for scrollable text areas
 TEXT_AREA_LINE_HEIGHT = 18  # Pixel height for each line of text, including some padding
@@ -52,7 +56,7 @@ TEXT_AREA_FONT_SIZE = 12    # Font size for area descriptions
 LOG_AREA_FONT_SIZE = 12       # Font size for combat/event logs
 
 # New constants for menu buttons with images
-MENU_BUTTON_IMAGE_PATH = os.path.join(ASSETS_DIR, "art", "menu_button.png") # <-- REPLACE WITH YOUR BUTTON IMAGE PATH
+MENU_BUTTON_IMAGE_PATH = os.path.join(UI_ART_PATH, "menu_button.png")
 MENU_BUTTON_TARGET_WIDTH = MENU_PANEL_WIDTH - 30 # Target width: Panel width minus 15px padding on each side
 MENU_BUTTON_HEIGHT = 40 # Further reduced height to make them less "dramatic"
 MENU_BUTTON_TEXT_COLOR = arcade.color.WHITE
@@ -318,7 +322,7 @@ class GameView(arcade.View):
     def load_current_area_art(self):
         """ Loads the art for the current area, with fallback to placeholder. """
         art_file_name = self.world.current_area.name.lower().replace(' ', '_') + ".jpg"
-        art_path = os.path.join(ART_PATH, art_file_name) # Use os.path.join for robust path construction
+        art_path = os.path.join(LOCATION_ART_PATH, art_file_name) # Use the new LOCATION_ART_PATH
         try:
             self.game_area_background = arcade.load_texture(art_path)
         except FileNotFoundError:
@@ -365,10 +369,15 @@ class GameView(arcade.View):
             # options_text = ["Flee Battle"] 
             # self.current_menu_options = options_text
         elif menu_type == "inventory_management": # New menu for inventory
-            options_text = ["View Items", "View Equipped", "Back"] # Initial inventory options
+            options_text = ["Equip Item", "View Items", "View Equipped", "Back"] # Added "Equip Item"
             self.current_menu_options = options_text
         elif menu_type == "view_bags_menu": # Menu for when viewing bags
             options_text = ["Back"]
+            self.current_menu_options = options_text
+        elif menu_type == "select_item_to_equip_menu":
+            options_text = [f"{i+1}. {item_info['item'].name} ({item_info['item'].type}) - from {item_info['source']}" 
+                            for i, item_info in enumerate(self.world.available_items_to_equip)]
+            options_text.append("Back")
             self.current_menu_options = options_text
         elif menu_type == "defeat_acknowledged_menu": # New menu after defeat messages are shown at camp
             options_text = ["Get Up"]
@@ -524,6 +533,22 @@ class GameView(arcade.View):
                     if count > 1: bags_text += f" x{count}"
                     bags_text += "\n"
             self._prepare_scrollable_text(bags_text, TEXT_AREA_FONT_SIZE, consistent_text_area_width)
+        
+        elif self.display_mode == "select_item_to_equip_display":
+            equip_selection_text = "--- Select Item to Equip ---\n\n"
+            if not self.world.available_items_to_equip:
+                equip_selection_text += "(No equipable items found in bags or strongbox.)"
+            else:
+                for i, item_info in enumerate(self.world.available_items_to_equip):
+                    item = item_info["item"]
+                    source = item_info["source"]
+                    equip_selection_text += f"{i+1}. {item.name} ({item.type}) - from {source}\n"
+                    # Optionally add item stats here if desired
+                    if item.description:
+                         equip_selection_text += f"   Desc: {item.description}\n"
+                    equip_selection_text += "\n"
+
+            self._prepare_scrollable_text(equip_selection_text, TEXT_AREA_FONT_SIZE, consistent_text_area_width)
 
     def on_show_view(self):
         arcade.set_background_color(arcade.color.GRAY)
@@ -838,6 +863,16 @@ class GameView(arcade.View):
                     self.log_messages_to_display.extend(self.world.get_messages())
                     self._prepare_scrollable_text_for_current_mode()
                     return # Handled locally
+                
+                elif command == "Back" and self.active_menu_type == "select_item_to_equip_menu":
+                    # Go back to the main inventory management view
+                    self.display_mode = "inventory_management"
+                    self.update_menu_options("inventory_management")
+                    self.log_messages_to_display.clear() # Clear selection prompt
+                    # Messages for inventory_management are usually just the inventory listing itself
+                    self._prepare_scrollable_text_for_current_mode()
+                    self.world.available_items_to_equip.clear() # Clear the list in world
+                    return # Handled locally
 
                 elif command == "Check Bags":
                     self.pre_bags_view_mode = self.display_mode
@@ -870,7 +905,13 @@ class GameView(arcade.View):
 
                 # --- If not a local view change, proceed with world interaction ---
                 self.log_messages_to_display.clear()
-                next_game_state = self.world.handle_player_choice(command) # World processes other commands
+                
+                # Construct command for equipping if in selection mode
+                action_command_to_world = command
+                if self.active_menu_type == "select_item_to_equip_menu" and command.isdigit(): # Assuming button text is just the number
+                    action_command_to_world = f"Equip Index: {int(command)-1}" # Convert 1-based to 0-based index
+                
+                next_game_state = self.world.handle_player_choice(action_command_to_world)
                 self.log_messages_to_display.extend(self.world.get_messages())
                 
                 # Update local state based on world's decision
@@ -904,6 +945,10 @@ class GameView(arcade.View):
                 elif next_game_state == "inventory_management": # Player chose "Prepare"
                     self.display_mode = "inventory_management"
                     self.update_menu_options("inventory_management")
+                elif next_game_state == "select_item_to_equip_mode": # World wants us to show item selection
+                    self.display_mode = "select_item_to_equip_display"
+                    self.update_menu_options("select_item_to_equip_menu")
+                    # Log messages (like "Select an item...") are already added by world
                 elif next_game_state == "area_description": # Combat ended, or general action
                     self.display_mode = "area_description"
                     self.update_menu_options("main") # Rebuild main action buttons

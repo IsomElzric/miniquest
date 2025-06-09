@@ -1,5 +1,5 @@
 crafting
 {'damage': 2, 'mitigation': 0, 'finesse': 4}
 ['Obsidian spires']
-A fragment of pure black volcanic glass, razor-sharp and remarkably hard
+obsidian_shard.png
 It gleams darkly and can cause deep cuts with just a touch.

@@ -1,5 +1,5 @@
 wealth
 3
 []
-Small, tarnished fragments of old-world coinage, jewelry, or decorative plating
+scrap_relic.png
 Often unrecognizable, but clearly made of once-precious metals like gold or silver.

@@ -208,9 +208,11 @@ class Entity():
             return False
         
     def equip_item(self, value):
+        # This method is now primarily for equipping from carried items by default.
+        # For equipping from strongbox or with explicit source, use equip_item_from_storage.
         self.inventory.equip_item(value)
         self.update_stats()
-
+    
     def accounting(self):
         if self.inventory.income >= self.target:
             self.level += 1
@@ -234,3 +236,13 @@ class Entity():
             self.update_stats() # Recalculate max_health, etc., based on new defense
             
             message_log_func(f"The encroaching darkness empowers {self.name}!")
+
+    def equip_item_from_storage(self, item_to_equip, source_location_name, message_log_func):
+        """
+        Instructs the inventory to equip an item, specifying its source.
+        Source can be 'carried' or 'strongbox'.
+        """
+        success = self.inventory.equip_item(item_to_equip, source_location_name=source_location_name, message_log_func=message_log_func)
+        if success:
+            self.update_stats()
+        # Inventory.equip_item will handle logging success/failure

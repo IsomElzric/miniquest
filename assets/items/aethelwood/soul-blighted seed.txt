@@ -1,5 +1,5 @@
 trinket
 {'attack': 0, 'defense': 2, 'speed': 0}
 ['Grove of hungering vines']
-A hard, blackened seed from a blighted plant, radiating a faint, sickly warmth
+soul-blighted_seed.png
 It feels unpleasantly resilient.

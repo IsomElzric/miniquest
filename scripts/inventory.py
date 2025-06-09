@@ -62,30 +62,63 @@ class Inventory():
                 message_log_func(f"You cannot carry any more {item_to_add.type} items.")
             return False
 
-    def equip_item(self, value):
-        # print('Attempting to equip {} type {}'.format(value.name, value.type))
-        if value.type in EQUIPABLE_TYPES:
-            # Ensure item is in stored_items before trying to pop/remove
-            if value in self.stored_items:
-                if value.type == 'weapon':
-                    # self.stow_item(self.equipped_items['Held']) # Optional: auto-stow previous
-                    self.equipped_items['Held'] = self.stored_items.pop(self.stored_items.index(value))
-                    print('Equipped {} in hands.\n'.format(self.equipped_items['Held'].name)) # Keep for CLI, GUI would use message_log
+    def equip_item(self, item_to_equip, source_location_name=None, message_log_func=None):
+        """
+        Equips an item. If an item is already in the slot, it's moved to the strongbox.
+        item_to_equip: The item object to equip.
+        source_location_name: String 'carried' or 'strongbox' indicating where the item comes from.
+                              Defaults to 'carried' if None.
+        message_log_func: Function to log messages.
+        Returns True if successful, False otherwise.
+        """
+        if not message_log_func: message_log_func = lambda x: print(x) # Fallback logger
 
-                elif value.type == 'armor':
-                    # self.stow_item(self.equipped_items['Body']) # Optional: auto-stow previous
-                    self.equipped_items['Body'] = self.stored_items.pop(self.stored_items.index(value))
-                    print('Equipped {} on body.\n'.format(self.equipped_items['Body'].name)) # Keep for CLI
+        if item_to_equip.type not in EQUIPABLE_TYPES:
+            message_log_func(f"You cannot equip {item_to_equip.name} ({item_to_equip.type}).")
+            return False
+
+        source_list = None
+        if source_location_name == "strongbox":
+            source_list = self.strongbox_items
+        elif source_location_name == "carried" or source_location_name is None: # Default to carried
+            source_list = self.stored_items
+            source_location_name = "carried" # Normalize for messages
+        
+        if source_list is None or item_to_equip not in source_list:
+            message_log_func(f"Cannot equip {item_to_equip.name}: not found in {source_location_name} items.")
+            # This might happen if the item was already equipped or list is out of sync.
+            return False
+
+        slot_to_equip = None
+        if item_to_equip.type == 'weapon': slot_to_equip = 'Held'
+        elif item_to_equip.type == 'armor': slot_to_equip = 'Body'
+        elif item_to_equip.type == 'trinket': slot_to_equip = 'Trinkets'
+
+        # Handle un-equipping current item in the slot (move to strongbox)
+        if slot_to_equip == 'Held' or slot_to_equip == 'Body':
+            currently_equipped = self.equipped_items[slot_to_equip]
+            if currently_equipped:
+                self.strongbox_items.append(currently_equipped) # Move old item to strongbox
+                message_log_func(f"{currently_equipped.name} moved to strongbox.")
+                self.equipped_items[slot_to_equip] = None
+            self.equipped_items[slot_to_equip] = item_to_equip
+        elif slot_to_equip == 'Trinkets':
+            # Basic trinket equipping: assumes fixed number of slots (e.g., 2)
+            # For simplicity, let's assume we can always equip if we have space, or replace the first one.
+            # A more robust system would allow choosing which trinket to replace if slots are full.
+            MAX_TRINKETS = 2 # Example limit
+            if len(self.equipped_items['Trinkets']) >= MAX_TRINKETS:
+                old_trinket = self.equipped_items['Trinkets'].pop(0) # Remove the oldest
+                self.strongbox_items.append(old_trinket)
+                message_log_func(f"Replaced {old_trinket.name} (Trinket) with {item_to_equip.name}. {old_trinket.name} moved to strongbox.")
+            self.equipped_items['Trinkets'].append(item_to_equip)
                 
-                elif value.type == 'trinket':
-                    if value not in self.equipped_items['Trinkets']:
-                        self.equipped_items['Trinkets'].append(value)
-                        self.stored_items.remove(value) # Item is now equipped, remove from general storage
-                        print('Equipped {} as a trinket.\n'.format(self.equipped_items['Trinkets'][-1].name)) # Keep for CLI
-            else:
-                print(f"Cannot equip {value.name} as it's not in your stored items (perhaps already equipped?).")
-        else:
-            print('You can not equip {}.'.format(value.name))
+        # Remove item from its original source list
+        source_list.remove(item_to_equip)
+        
+        message_log_func(f"Equipped {item_to_equip.name} ({item_to_equip.type}).")
+        message_log_func("") # Spacing
+        return True
 
     def stow_item(self, value):
         if value.type == 'weapon':

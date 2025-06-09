@@ -1,5 +1,5 @@
 wealth
 7
 ['Heart of the knowledge']
-A small, smooth, dark crystal that subtly absorbs ambient light, making it seem impossibly black
+whisper-crystal.png
 When held, it emits a barely audible, unsettling hum that sometimes sounds like distant, sibilant voices.

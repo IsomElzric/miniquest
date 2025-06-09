@@ -4,7 +4,7 @@ from scripts.combat import Combat
 from scripts.entity import Entity
 from scripts.builder import Builder # Ensure Builder is imported
 from scripts.location import Location
-from scripts.inventory import Inventory
+from scripts.inventory import Inventory, EQUIPABLE_TYPES # Import EQUIPABLE_TYPES
 from scripts.loot import Loot
 from scripts.day_cycle import DayCycle # Import the new DayCycle class
 import sys
@@ -63,6 +63,7 @@ class World():
         # New state for post-combat loot decision
         self.in_loot_decision_mode = False
         self.pending_loot_item = None
+        self.available_items_to_equip = [] # For the new equip functionality
 
 
     def append_message(self, message):
@@ -216,10 +217,22 @@ class World():
         elif 'Prepare' in choice_text:
             self.prepare()
             return "inventory_management" # GUI will switch to inventory view
-        # NEW: Handle inventory view sub-actions. For now, they just keep the view.
-        # GameView handles the actual display.
+        elif choice_text == "Equip Item": # New action from inventory_management menu
+            self.available_items_to_equip.clear()
+            # Gather equipable items from both carried and strongbox
+            for item in self.player.inventory.stored_items:
+                if item.type in EQUIPABLE_TYPES: # Use the imported constant
+                    self.available_items_to_equip.append({"item": item, "source": "carried"})
+            for item in self.player.inventory.strongbox_items:
+                if item.type in EQUIPABLE_TYPES: # Use the imported constant
+                    self.available_items_to_equip.append({"item": item, "source": "strongbox"})
+            
+            if not self.available_items_to_equip:
+                self.append_message("You have no equipable items in your bags or strongbox.")
+                return "inventory_management" # Stay in inventory view
+            return "select_item_to_equip_mode"
         elif choice_text == "View Items":
-            return "inventory_management" 
+            return "inventory_management"
         elif choice_text == "View Equipped":
             return "inventory_management"
         elif choice_text == "Continue": # New command after defeat log is shown
@@ -227,6 +240,21 @@ class World():
             # Now, show the camp's area description.
             self.display_current_area() # Populate log with camp description
             return "area_description"
+        elif choice_text.startswith("Equip Index: "):
+            try:
+                index_to_equip = int(choice_text.split(": ")[1])
+                if 0 <= index_to_equip < len(self.available_items_to_equip):
+                    selected_item_info = self.available_items_to_equip[index_to_equip]
+                    # We'll call a refined equip method in the player/inventory next
+                    self.player.equip_item_from_storage(selected_item_info["item"], selected_item_info["source"], self.append_message)
+                    self.available_items_to_equip.clear() # Clear after equipping
+                    return "inventory_management" # Return to main inventory view
+                else:
+                    self.append_message("Invalid item selection.")
+                    return "select_item_to_equip_mode" # Stay in selection mode
+            except (ValueError, IndexError):
+                self.append_message("Error processing equip selection.")
+                return "select_item_to_equip_mode"
         else:
             self.append_message(f"'{choice_text}' is not a valid action or you cannot do that here.")
             return "area_description" # Default to showing message in log for invalid actions
