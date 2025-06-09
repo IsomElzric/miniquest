@@ -174,7 +174,12 @@ class World():
         # and then "Continue" to "area_description".
         
         if self.in_loot_decision_mode:
-            if choice_text == "Take Item":
+            # Construct expected choice texts based on the pending item
+            expected_take_choice = f"Take {self.pending_loot_item.name}" if self.pending_loot_item else ""
+            expected_leave_choice = f"Leave {self.pending_loot_item.name}" if self.pending_loot_item else ""
+            # expected_drop_loot_choice for when player can't carry, but we'll handle that differently now.
+
+            if choice_text == expected_take_choice:
                 if self.pending_loot_item:
                     # add_item_to_inventory in loot.py now uses the inventory's capacity-aware method
                     # It will log success or failure (due to capacity)
@@ -182,19 +187,16 @@ class World():
                 self._end_loot_decision_phase()
                 self.display_current_area() # Refresh area description
                 return "area_description"
-            elif choice_text == "Drop Loot": # New option if player can't carry
-                if self.pending_loot_item:
-                    self.append_message(f"You discard the {self.pending_loot_item.name}.")
-                    self.append_message('')
-                self._end_loot_decision_phase()
-                self.display_current_area() # Refresh area description
-                return "area_description"
-            elif choice_text == "Leave":
+            elif choice_text == expected_leave_choice:
                 self.append_message(f"You decide to leave the {self.pending_loot_item.name if self.pending_loot_item else 'item'}.")
                 self.append_message('')
                 self._end_loot_decision_phase()
                 self.display_current_area() # Refresh area description
                 return "area_description"
+            else:
+                # Fallback if the choice_text doesn't match expected commands for loot decision
+                self.append_message(f"Invalid choice during loot decision: {choice_text}")
+                return "show_loot_options" # Stay in loot decision mode
 
         if self.in_travel_selection_mode:
             return self.handle_travel_choice(choice_text)
@@ -255,6 +257,17 @@ class World():
             except (ValueError, IndexError):
                 self.append_message("Error processing equip selection.")
                 return "select_item_to_equip_mode"
+        elif choice_text.startswith("Drop Item: "): # Expecting "Drop Item: Item Name from Source"
+            # This is a placeholder for how GameView might send the command.
+            # We need to parse item_name and source from choice_text if we go this route,
+            # or have GameView pass the selected_item object and its source more directly.
+            # For now, let's assume GameView will pass the item object and source via a different mechanism
+            # or that `self.player.inventory.drop_item` will be called directly by GameView after confirmation.
+            # This part of handle_player_choice might not be directly used if GameView handles it.
+            # However, if we want a world-level command:
+            item_name_to_drop = choice_text.split(": ", 1)[1] # Simplistic parsing
+            self.append_message(f"Attempting to drop {item_name_to_drop}... (Logic to be refined)")
+            return "inventory_management" # Refresh inventory view
         else:
             self.append_message(f"'{choice_text}' is not a valid action or you cannot do that here.")
             return "area_description" # Default to showing message in log for invalid actions
@@ -339,7 +352,7 @@ class World():
             if dropped_item:
                 self.pending_loot_item = dropped_item
                 self.in_loot_decision_mode = True
-                return "loot_decision" # New state for GUI
+                return "show_loot_options" # New state for GameView to trigger specific loot UI
             else:
                 return "area_description" # No loot, combat over
         else:

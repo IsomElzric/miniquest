@@ -130,6 +130,35 @@ class Inventory():
         message_log_func("") # Spacing
         return True
 
+    def drop_item(self, item_to_drop, source_location_name, message_log_func=None):
+        """
+        Removes (drops) an item from the specified inventory list (carried or strongbox).
+        Does not currently handle dropping equipped items directly (they should be unequipped first).
+        """
+        if not message_log_func: message_log_func = lambda x: print(x)
+
+        source_list = None
+        if source_location_name == "carried":
+            source_list = self.stored_items
+        elif source_location_name == "strongbox":
+            source_list = self.strongbox_items
+        elif source_location_name.startswith("equipped_"):
+            message_log_func(f"Cannot directly drop equipped item: {item_to_drop.name}. Please unequip it first.")
+            return False # Or handle unequip then drop
+        else:
+            message_log_func(f"Unknown source location '{source_location_name}' for dropping {item_to_drop.name}.")
+            return False
+
+        if item_to_drop in source_list:
+            source_list.remove(item_to_drop)
+            # Note: item remains in self.owned_items unless you want a "permanently lose" mechanic.
+            message_log_func(f"You dropped {item_to_drop.name} from your {source_location_name} items.")
+            message_log_func("")
+            return True
+        else:
+            message_log_func(f"Could not find {item_to_drop.name} in {source_location_name} items to drop.")
+            return False
+
     def stow_item(self, value):
         if value.type == 'weapon':
             self.stored_items.append(self.equipped_items['Held'])

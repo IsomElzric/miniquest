@@ -383,15 +383,16 @@ class GameView(arcade.View):
         elif menu_type == "player_combat_turn": # For player's combat actions
             options_text = ["Attack", "Flee", "Check Bags"] # Add Check Bags option
             self.current_menu_options = options_text
-        elif menu_type == "loot_decision": # For post-combat loot
-            # Check if player can carry the pending loot item
-            if self.world.pending_loot_item and self.world.player.inventory.can_carry_item(self.world.pending_loot_item):
-                options_text = ["Take Item", "Leave"]
-            else:
-                # If cannot carry, or no pending item (should not happen if in this state)
-                options_text = ["Drop Loot", "Leave"] # "Drop Loot" means discard the new item
-            # No "Check Bags" here as it might complicate the loot decision flow,
-            # and inventory is already shown.
+        elif menu_type == "loot_decision_menu": # New menu for the loot decision screen
+            options_text = []
+            if self.world.pending_loot_item:
+                item_name = self.world.pending_loot_item.name
+                # Always offer to leave the item
+                options_text.append(f"Leave {item_name}")
+                # Offer to take if player can carry it
+                if self.world.player.inventory.can_carry_item(self.world.pending_loot_item):
+                    options_text.insert(0, f"Take {item_name}") # Take option first
+                # "Drop item to make space" will be added in Phase 2 if cannot carry
             self.current_menu_options = options_text
         # elif menu_type == "player_defeated_flee_only": # This menu type is replaced
             # options_text = ["Flee Battle"] 
@@ -416,7 +417,11 @@ class GameView(arcade.View):
                 # Check if the item is already equipped in the correct slot or if it's a trinket and max are equipped
                 # For simplicity now, always show Equip if equipable. Inventory.equip_item handles logic.
                 options_text.append("Equip")
+            # Add "Drop Item" button if an item is selected and it's not an equipped item (for now)
+            if self.selected_inventory_item and self.selected_item_source not in ["equipped_held", "equipped_body", "equipped_trinkets"]:
+                options_text.append("Drop Item")
             options_text.append("Back to Inventory")
+
             self.current_menu_options = options_text
         
         # Create button sprites
@@ -511,7 +516,7 @@ class GameView(arcade.View):
             #     self.current_scrollable_lines.clear()
             # For now, titles will be drawn directly in on_draw for these modes.
             pass # No complex text prep needed, on_draw handles icon display
-        elif self.display_mode == "item_details_display":
+        elif self.display_mode == "item_details_display" or self.display_mode == "loot_decision_display":
             self.current_scrollable_lines.clear()
             self.scroll_offset_y = 0.0
             if self.selected_inventory_item:
@@ -519,7 +524,11 @@ class GameView(arcade.View):
                 details_text += f"Type: {self.selected_inventory_item.type}\n\n"
                 details_text += f"Description:\n{self.selected_inventory_item.description}"
                 self._prepare_scrollable_text(details_text, TEXT_AREA_FONT_SIZE, consistent_text_area_width)
-            pass # No complex text prep needed, on_draw handles icon display
+            elif self.world.pending_loot_item and self.display_mode == "loot_decision_display":
+                # For loot decision, on_draw handles the primary display.
+                # We might add a title here if needed, but for now, it's icon-focused.
+                pass
+            # Pass for other icon-based views where on_draw handles content
 
     def on_show_view(self):
         arcade.set_background_color(arcade.color.GRAY)
@@ -850,14 +859,51 @@ class GameView(arcade.View):
             draw_item_section("== Carried Items (Bags) ==", self.player.inventory.stored_items)
             draw_item_section("== Strongbox (Camp) ==", self.player.inventory.strongbox_items)
 
+        elif self.display_mode == "loot_decision_display":
+            current_draw_y = _scroll_area_top_y_for_lines
+            self.inventory_item_clickable_sprites.clear() # Not making these clickable yet
+
+            arcade.draw_text("--- Loot Found! ---", description_x, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE + 2, bold=True, anchor_y="top")
+            current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_SECTION_SPACING / 2)
+
+            pending_item = self.world.pending_loot_item
+            if pending_item:
+                icon_texture = self._get_item_icon_texture(pending_item)
+                if icon_texture:
+                    arcade.draw_texture_rectangle(description_x + ITEM_ICON_DRAW_SIZE[0] / 2,
+                                                  current_draw_y - ITEM_ICON_DRAW_SIZE[1] / 2,
+                                                  ITEM_ICON_DRAW_SIZE[0], ITEM_ICON_DRAW_SIZE[1],
+                                                  icon_texture)
+                
+                item_display_name = f"{pending_item.name} ({pending_item.type})"
+                text_draw_y = current_draw_y - (ITEM_ICON_DRAW_SIZE[1] / 2) + (TEXT_AREA_LINE_HEIGHT / 2) - 4
+                arcade.draw_text(item_display_name, description_x + ITEM_TEXT_OFFSET_X, text_draw_y,
+                                  _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
+                current_draw_y -= (max(ITEM_ICON_DRAW_SIZE[1], TEXT_AREA_LINE_HEIGHT) + ITEM_ICON_VERTICAL_SPACING)
+                if pending_item.description:
+                    # Simple description display for now, not fully wrapped/scrollable within this section
+                    desc_lines = textwrap.wrap(f"Desc: {pending_item.description}", width=int(description_width / (TEXT_AREA_FONT_SIZE * 0.6)))
+                    for line in desc_lines:
+                        arcade.draw_text(line, description_x + ITEM_TEXT_OFFSET_X, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE -2, anchor_y="top")
+                        current_draw_y -= TEXT_AREA_LINE_HEIGHT
+            current_draw_y -= ITEM_SECTION_SPACING
+
+            arcade.draw_text("--- Your Carried Items ---", description_x, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE + 2, bold=True, anchor_y="top")
+            current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_SECTION_SPACING / 2)
+
+            if not self.player.inventory.stored_items:
+                arcade.draw_text("(Bags are empty)", description_x + ITEM_TEXT_OFFSET_X, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
+            else:
+                # Simplified display of carried items (icons and names)
+                for item in self.player.inventory.stored_items:
+                    icon_texture = self._get_item_icon_texture(item)
+                    if icon_texture:
+                        arcade.draw_texture_rectangle(description_x + ITEM_ICON_DRAW_SIZE[0] / 2, current_draw_y - ITEM_ICON_DRAW_SIZE[1] / 2, ITEM_ICON_DRAW_SIZE[0], ITEM_ICON_DRAW_SIZE[1], icon_texture)
+                    arcade.draw_text(f"{item.name} ({item.type})", description_x + ITEM_TEXT_OFFSET_X, current_draw_y - (ITEM_ICON_DRAW_SIZE[1] / 2) + (TEXT_AREA_LINE_HEIGHT / 2) - 4, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
+                    current_draw_y -= (max(ITEM_ICON_DRAW_SIZE[1], TEXT_AREA_LINE_HEIGHT) + ITEM_ICON_VERTICAL_SPACING)
+
         elif self.display_mode == "view_bags" or self.display_mode == "select_item_to_equip_display" or self.display_mode == "item_details_display":
-            # Similar to inventory_management, but only equipped and carried
-            # (Implementation can be added here, copying structure from "inventory_management")
-            # For these modes, if they have text content, draw it.
-            # Icon drawing for these modes will be added if/when they become icon-based.
-            # For "item_details_display", text is already prepared.
-            if self.current_scrollable_lines: # Fallback to text if any was prepared
-                # Re-use the common scrollable text drawing logic from above
+            if self.current_scrollable_lines:
                 first_visible_line_idx = int(self.scroll_offset_y / TEXT_AREA_LINE_HEIGHT)
                 lines_in_view = int(_scroll_area_height_for_lines / TEXT_AREA_LINE_HEIGHT)
                 for i in range(len(self.current_scrollable_lines)):
@@ -1007,6 +1053,24 @@ class GameView(arcade.View):
                         self._prepare_scrollable_text_for_current_mode() # Prepares for icon view (clears lines)
                         return # Crucial: prevent fall-through to world.handle_player_choice
 
+                elif command == "Drop Item" and self.active_menu_type == "item_details_menu":
+                    if self.selected_inventory_item and self.selected_item_source:
+                        # Directly call a new method in player's inventory
+                        success = self.player.inventory.drop_item(
+                            self.selected_inventory_item,
+                            self.selected_item_source,
+                            self.world.append_message # Pass the world's logger
+                        )
+                        # Regardless of success, go back to inventory view and refresh
+                        self.selected_inventory_item = None
+                        self.selected_item_source = None
+                        
+                        self.display_mode = "inventory_management"
+                        self.update_menu_options("inventory_management")
+                        self.log_messages_to_display.clear()
+                        self.log_messages_to_display.extend(self.world.get_messages()) # Get drop success/fail messages
+                        self._prepare_scrollable_text_for_current_mode()
+                        return # Prevent fall-through
                 elif command == "Check Bags":
                     self.pre_bags_view_mode = self.display_mode
                     self.pre_bags_menu_type = self.active_menu_type # Use stored active_menu_type
@@ -1054,20 +1118,11 @@ class GameView(arcade.View):
                 elif next_game_state == "travel_options":
                     self.display_mode = "area_description" # Stay in description to show travel prompt
                     self.update_menu_options("travel") # This will rebuild buttons for travel
-                elif next_game_state == "loot_decision":
+                elif next_game_state == "show_loot_options": # Updated state from World
                     self.display_mode = "combat_log" # Show loot messages in the log area
-                    self.update_menu_options("loot_decision") # Show Take/Leave buttons
-                    # Prepare text to show current inventory relevant to loot decision
-                    loot_info_text = "--- Loot Found! ---\n"
-                    if self.world.pending_loot_item:
-                        loot_info_text += f"You found: {self.world.pending_loot_item.name} ({self.world.pending_loot_item.type})\n\n"
-                        loot_info_text += "Your carried items:\n"
-                        if self.world.player.inventory.stored_items:
-                            for item in self.world.player.inventory.stored_items:
-                                loot_info_text += f" - {item.name} ({item.type})\n"
-                        else:
-                            loot_info_text += "(None carried)\n"
-                    self._prepare_scrollable_text(loot_info_text, LOG_AREA_FONT_SIZE, GAME_AREA_WIDTH - (2 * LEFT_PADDING) - 5)
+                    self.display_mode = "loot_decision_display" # Switch to the new display mode
+                    self.update_menu_options("loot_decision_menu") # Show new Take/Leave buttons
+                    # self.log_messages_to_display will already have "You found X" from world.
                 # elif next_game_state == "player_defeated_must_flee": # This state is removed
                     # self.display_mode = "combat_log" # Show defeat messages
                     # self.update_menu_options("player_defeated_flee_only") # Show only "Flee Battle"
