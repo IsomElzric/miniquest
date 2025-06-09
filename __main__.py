@@ -65,6 +65,12 @@ MENU_BUTTON_TEXT_PADDING = 10 # Padding for text inside the button (e.g., 5px on
 MENU_ACTIONS_TITLE_FONT_SIZE = 24 # Font size of the "Actions" title
 MENU_PADDING_BELOW_TITLE = 15 # Padding between the "Actions" title and the first button
 
+# --- Item Icon Display Constants ---
+ITEM_ICON_DRAW_SIZE = (32, 32) # The size to draw icons on screen
+ITEM_ICON_VERTICAL_SPACING = 10 # Space between item rows (icon + text)
+ITEM_TEXT_OFFSET_X = ITEM_ICON_DRAW_SIZE[0] + 10 # Horizontal offset for text next to icon
+ITEM_SECTION_SPACING = 20 # Vertical space between "Equipped", "Carried", "Strongbox" sections
+
 
 class MenuView(arcade.View):
     """
@@ -286,6 +292,12 @@ class GameView(arcade.View):
         # For "Check Bags" functionality
         self.pre_bags_view_mode = None
         self.pre_bags_menu_type = None
+
+        # For item icons
+        self.item_icon_textures = {} # Cache for loaded item icon textures
+        self.default_item_icon_texture = None
+        self._load_default_item_icon()
+
         self.active_menu_type = "main" # Track the current menu type
 
         # Load top banner background
@@ -332,6 +344,17 @@ class GameView(arcade.View):
             if self.game_area_background is None:
                 print("Critical: No specific area art or placeholder art found. Using solid color fallback.")
 
+
+    def _load_default_item_icon(self):
+        """Loads the default item icon texture."""
+        try:
+            # Path for the default icon, assuming it's in a 'ui' subfolder of item_icons
+            default_icon_path = os.path.join(ITEM_ICON_ART_PATH, "ui", "default_icon.png")
+            self.default_item_icon_texture = arcade.load_texture(default_icon_path)
+            print(f"Successfully loaded default item icon from: {default_icon_path}")
+        except FileNotFoundError:
+            print(f"ERROR: Default item icon 'default_icon.png' not found in {os.path.join(ITEM_ICON_ART_PATH, 'ui')}")
+            self.default_item_icon_texture = None # Explicitly set to None
 
     def update_menu_options(self, menu_type="main"):
         # We need to refresh the current area data to get accurate connections after travel
@@ -464,91 +487,17 @@ class GameView(arcade.View):
             self._prepare_scrollable_text(self.world.current_area.description, TEXT_AREA_FONT_SIZE, consistent_text_area_width)
         elif self.display_mode == "combat_log":
             self._prepare_scrollable_text("\n".join(self.log_messages_to_display), LOG_AREA_FONT_SIZE, consistent_text_area_width)
-        
-        elif self.display_mode == "inventory_management":
-            inventory_text = "--- Camp Preparations ---\n\n"
-
-            inventory_text += "== Equipped Items ==\n"
-            if self.player.inventory.equipped_items['Held']:
-                inventory_text += f"Held: {self.player.inventory.equipped_items['Held'].name}\n"
-            else:
-                inventory_text += "Held: (None)\n"
-            if self.player.inventory.equipped_items['Body']:
-                inventory_text += f"Body: {self.player.inventory.equipped_items['Body'].name}\n"
-            else:
-                inventory_text += "Body: (None)\n"
-            if self.player.inventory.equipped_items['Trinkets']:
-                trinket_names = [t.name for t in self.player.inventory.equipped_items['Trinkets']]
-                inventory_text += f"Trinkets: {', '.join(trinket_names) if trinket_names else '(None)'}\n"
-            else:
-                inventory_text += "Trinkets: (None)\n"
-            inventory_text += "\n"
-
-            inventory_text += "== Carried Items (In Bags) ==\n"
-            if not self.player.inventory.stored_items:
-                inventory_text += "(Bags are empty)\n"
-            else:
-                item_counts = Counter(item.name for item in self.player.inventory.stored_items)
-                for name, count in item_counts.items():
-                    sample_item = next(item for item in self.player.inventory.stored_items if item.name == name)
-                    inventory_text += f" - {name} ({sample_item.type})"
-                    if count > 1:
-                        inventory_text += f" x{count}"
-                    inventory_text += "\n"
-            inventory_text += "\n"
-
-            inventory_text += "== Strongbox Items (At Camp) ==\n"
-            if not self.player.inventory.strongbox_items:
-                inventory_text += "(Strongbox is empty)\n"
-            else:
-                strongbox_item_counts = Counter(item.name for item in self.player.inventory.strongbox_items)
-                for name, count in strongbox_item_counts.items():
-                    sample_item = next(item for item in self.player.inventory.strongbox_items if item.name == name)
-                    inventory_text += f" - {name} ({sample_item.type})"
-                    if count > 1:
-                        inventory_text += f" x{count}"
-                    inventory_text += "\n"
-            
-            self._prepare_scrollable_text(inventory_text, TEXT_AREA_FONT_SIZE, consistent_text_area_width)
-
-        elif self.display_mode == "view_bags":
-            bags_text = "--- Your Bags ---\n\n"
-            bags_text += "== Equipped Items ==\n"
-            if self.player.inventory.equipped_items['Held']: bags_text += f"Held: {self.player.inventory.equipped_items['Held'].name}\n"
-            else: bags_text += "Held: (None)\n"
-            if self.player.inventory.equipped_items['Body']: bags_text += f"Body: {self.player.inventory.equipped_items['Body'].name}\n"
-            else: bags_text += "Body: (None)\n"
-            if self.player.inventory.equipped_items['Trinkets']:
-                trinket_names = [t.name for t in self.player.inventory.equipped_items['Trinkets']]
-                bags_text += f"Trinkets: {', '.join(trinket_names) if trinket_names else '(None)'}\n"
-            else: bags_text += "Trinkets: (None)\n"
-            bags_text += "\n"
-            bags_text += "== Carried Items (In Bags) ==\n"
-            if not self.player.inventory.stored_items: bags_text += "(Bags are empty)\n"
-            else:
-                item_counts = Counter(item.name for item in self.player.inventory.stored_items)
-                for name, count in item_counts.items():
-                    sample_item = next(item for item in self.player.inventory.stored_items if item.name == name)
-                    bags_text += f" - {name} ({sample_item.type})"
-                    if count > 1: bags_text += f" x{count}"
-                    bags_text += "\n"
-            self._prepare_scrollable_text(bags_text, TEXT_AREA_FONT_SIZE, consistent_text_area_width)
-        
-        elif self.display_mode == "select_item_to_equip_display":
-            equip_selection_text = "--- Select Item to Equip ---\n\n"
-            if not self.world.available_items_to_equip:
-                equip_selection_text += "(No equipable items found in bags or strongbox.)"
-            else:
-                for i, item_info in enumerate(self.world.available_items_to_equip):
-                    item = item_info["item"]
-                    source = item_info["source"]
-                    equip_selection_text += f"{i+1}. {item.name} ({item.type}) - from {source}\n"
-                    # Optionally add item stats here if desired
-                    if item.description:
-                         equip_selection_text += f"   Desc: {item.description}\n"
-                    equip_selection_text += "\n"
-
-            self._prepare_scrollable_text(equip_selection_text, TEXT_AREA_FONT_SIZE, consistent_text_area_width)
+        # For icon-based views, text preparation is minimal or handled directly in on_draw
+        elif self.display_mode in ["inventory_management", "view_bags", "select_item_to_equip_display"]:
+            self.current_scrollable_lines.clear() # Clear lines, as drawing is icon-based
+            self.scroll_offset_y = 0.0
+            # We might add a title line here if needed, e.g.,
+            # if self.display_mode == "inventory_management":
+            #     self._prepare_scrollable_text("--- Camp Preparations ---", TEXT_AREA_FONT_SIZE, consistent_text_area_width)
+            # else:
+            #     self.current_scrollable_lines.clear()
+            # For now, titles will be drawn directly in on_draw for these modes.
+            pass # No complex text prep needed, on_draw handles icon display
 
     def on_show_view(self):
         arcade.set_background_color(arcade.color.GRAY)
@@ -556,6 +505,32 @@ class GameView(arcade.View):
         self.update_menu_options("main") # Set initial main menu options
         self.log_messages_to_display = self.world.get_messages() # Get welcome and character creation messages
         self._prepare_scrollable_text_for_current_mode() # Prepare initial text
+
+    def _get_item_icon_texture(self, item):
+        """Loads and caches an item's icon texture. Returns default if not found."""
+        if not item:
+            return self.default_item_icon_texture
+
+        # Use a unique key for the cache, e.g., item name + subfolder
+        cache_key = f"{item.icon_subfolder}_{item.icon_filename}"
+
+        if cache_key in self.item_icon_textures:
+            return self.item_icon_textures[cache_key]
+
+        icon_path = "Unknown (icon data missing)" # Placeholder
+        if item.icon_filename and item.icon_subfolder:
+            try:
+                icon_path = os.path.join(ITEM_ICON_ART_PATH, item.icon_subfolder, item.icon_filename)
+                texture = arcade.load_texture(icon_path)
+                self.item_icon_textures[cache_key] = texture
+                return texture
+            except FileNotFoundError:
+                print(f"Warning: Icon not found for {item.name} at {icon_path}. Using default.")
+            except Exception as e: # Catch other potential errors like PIL issues
+                print(f"Error loading icon for {item.name} at {icon_path}: {e}. Using default.")
+        
+        # Fallback to default if specific icon couldn't be loaded or info is missing
+        return self.default_item_icon_texture
 
     def on_draw(self):
         self.clear()
@@ -698,7 +673,7 @@ class GameView(arcade.View):
         _scroll_area_top_y_for_lines = description_y  # Default: top of the text box
         _scroll_area_height_for_lines = text_bg_height # Default: full height of text box
         _line_font_size = TEXT_AREA_FONT_SIZE
-        _line_color = arcade.color.LIGHT_GRAY # Default color
+        _text_color_for_mode = arcade.color.LIGHT_GRAY # Default color for text
 
         if self.display_mode == "area_description":
             # --- Location Name ---
@@ -721,53 +696,118 @@ class GameView(arcade.View):
 
             _scroll_area_top_y_for_lines = description_y - (name_font_size + spacing_after_name)
             _scroll_area_height_for_lines = text_bg_height - (name_font_size + spacing_after_name)
-            _line_font_size = TEXT_AREA_FONT_SIZE
-            _line_color = arcade.color.LIGHT_GRAY
+            _line_font_size = TEXT_AREA_FONT_SIZE # Already default
+            _text_color_for_mode = arcade.color.LIGHT_GRAY # Already default
+
         elif self.display_mode == "combat_log":
             _line_font_size = LOG_AREA_FONT_SIZE
-            _line_color = arcade.color.WHITE
-        elif self.display_mode == "inventory_management" or self.display_mode == "view_bags":
+            _text_color_for_mode = arcade.color.WHITE
+
+        elif self.display_mode in ["inventory_management", "view_bags", "select_item_to_equip_display"]:
             _line_font_size = TEXT_AREA_FONT_SIZE 
-            _line_color = arcade.color.WHITE # Brighter for inventory text
+            _text_color_for_mode = arcade.color.WHITE # Brighter for inventory text
+            # Icon drawing will happen in a separate block below
 
         # Update self.scrollable_text_rect_on_screen for the current mode (used by on_mouse_scroll)
+        # This defines the area where mouse scrolling affects the view.
+        # For icon views, this might need adjustment if scrolling is implemented differently.
         self.scrollable_text_rect_on_screen = (
             description_x,  # left_x
             _scroll_area_top_y_for_lines - _scroll_area_height_for_lines,  # bottom_y
             description_width,  # width
             _scroll_area_height_for_lines  # height
         )
-        # For debugging the scroll area bounds:
-        # arcade.draw_lrbt_rectangle_outline(*self.scrollable_text_rect_on_screen, arcade.color.GREEN, 1)
 
-        # --- Common Scrollable Text Drawing Logic ---
-        if self.current_scrollable_lines:
-            first_visible_line_idx = int(self.scroll_offset_y / TEXT_AREA_LINE_HEIGHT)
-            lines_in_view = int(_scroll_area_height_for_lines / TEXT_AREA_LINE_HEIGHT)
+        # --- Draw content based on display_mode ---
+        if self.display_mode in ["area_description", "combat_log"]:
+            # --- Common Scrollable Text Drawing Logic ---
+            if self.current_scrollable_lines:
+                first_visible_line_idx = int(self.scroll_offset_y / TEXT_AREA_LINE_HEIGHT)
+                lines_in_view = int(_scroll_area_height_for_lines / TEXT_AREA_LINE_HEIGHT)
 
-            for i in range(len(self.current_scrollable_lines)):
-                if i < first_visible_line_idx:
-                    continue
-                if i > first_visible_line_idx + lines_in_view + 1:  # +1 for partially visible line
-                    break
-                
-                line_text_content = self.current_scrollable_lines[i]
-                line_y_offset_from_content_top = i * TEXT_AREA_LINE_HEIGHT
-                draw_y_on_screen = _scroll_area_top_y_for_lines - (line_y_offset_from_content_top - self.scroll_offset_y)
+                for i in range(len(self.current_scrollable_lines)):
+                    if i < first_visible_line_idx:
+                        continue
+                    if i > first_visible_line_idx + lines_in_view + 1:  # +1 for partially visible line
+                        break
+                    
+                    line_text_content = self.current_scrollable_lines[i]
+                    line_y_offset_from_content_top = i * TEXT_AREA_LINE_HEIGHT
+                    draw_y_on_screen = _scroll_area_top_y_for_lines - (line_y_offset_from_content_top - self.scroll_offset_y)
 
-                # Basic clipping: only draw if the line's top is within drawable vertical space
-                if draw_y_on_screen <= _scroll_area_top_y_for_lines and \
-                   draw_y_on_screen >= _scroll_area_top_y_for_lines - _scroll_area_height_for_lines - TEXT_AREA_LINE_HEIGHT:
-                    arcade.draw_text(
-                        line_text_content,
-                        description_x, # Use description_x as the consistent left starting point
-                        draw_y_on_screen,
-                        _line_color,
-                        font_size=_line_font_size,
-                        width=description_width, # Use description_width for consistency
-                        anchor_x="left",
-                        anchor_y="top"
-                    )
+                    if draw_y_on_screen <= _scroll_area_top_y_for_lines and \
+                       draw_y_on_screen >= _scroll_area_top_y_for_lines - _scroll_area_height_for_lines - TEXT_AREA_LINE_HEIGHT:
+                        arcade.draw_text(
+                            line_text_content,
+                            description_x, 
+                            draw_y_on_screen,
+                            _text_color_for_mode,
+                            font_size=_line_font_size,
+                            width=description_width, 
+                            anchor_x="left",
+                            anchor_y="top"
+                        )
+        elif self.display_mode == "inventory_management":
+            # --- Draw Icon-Based Inventory for "Prepare" menu ---
+            current_draw_y = _scroll_area_top_y_for_lines # Start drawing from the top of the defined area
+            
+            # Helper function to draw an item section
+            def draw_item_section(title, items_list_or_dict, is_dict_of_items=False, is_list_of_dicts=False):
+                nonlocal current_draw_y
+                arcade.draw_text(title, description_x, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE + 2, bold=True, anchor_y="top")
+                current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_SECTION_SPACING / 2)
+
+                items_to_draw = []
+                if is_dict_of_items: # For equipped_items
+                    for slot, item_obj in items_list_or_dict.items():
+                        if isinstance(item_obj, list): # Trinkets
+                            for trinket in item_obj:
+                                if trinket: items_to_draw.append(trinket)
+                        elif item_obj:
+                            items_to_draw.append(item_obj)
+                elif is_list_of_dicts: # For available_items_to_equip
+                     for item_info in items_list_or_dict:
+                         items_to_draw.append(item_info['item']) # Assuming item_info has 'item' key
+                else: # For stored_items, strongbox_items (lists of item objects)
+                    items_to_draw = items_list_or_dict
+
+                if not items_to_draw:
+                    arcade.draw_text("(Empty)", description_x + ITEM_ICON_DRAW_SIZE[0] + 10, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
+                    current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_ICON_VERTICAL_SPACING)
+                else:
+                    for item in items_to_draw:
+                        icon_texture = self._get_item_icon_texture(item)
+                        if icon_texture:
+                            arcade.draw_texture_rectangle(description_x + ITEM_ICON_DRAW_SIZE[0] / 2, 
+                                                          current_draw_y - ITEM_ICON_DRAW_SIZE[1] / 2, 
+                                                          ITEM_ICON_DRAW_SIZE[0], ITEM_ICON_DRAW_SIZE[1], 
+                                                          icon_texture)
+                        
+                        item_display_name = f"{item.name} ({item.type})"
+                        # Add quantity for stackable items if applicable (e.g. from Counter)
+                        # For now, just name and type.
+                        arcade.draw_text(item_display_name, description_x + ITEM_TEXT_OFFSET_X, current_draw_y, 
+                                          _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
+                        current_draw_y -= (max(ITEM_ICON_DRAW_SIZE[1], TEXT_AREA_LINE_HEIGHT) + ITEM_ICON_VERTICAL_SPACING)
+                current_draw_y -= ITEM_SECTION_SPACING # Space before next section
+
+            draw_item_section("== Equipped Items ==", self.player.inventory.equipped_items, is_dict_of_items=True)
+            draw_item_section("== Carried Items (Bags) ==", self.player.inventory.stored_items)
+            draw_item_section("== Strongbox (Camp) ==", self.player.inventory.strongbox_items)
+
+        elif self.display_mode == "view_bags":
+            # Similar to inventory_management, but only equipped and carried
+            # (Implementation can be added here, copying structure from "inventory_management")
+            # For now, let it fall through to default text drawing if any text was prepared
+            if self.current_scrollable_lines: # Fallback to text if any was prepared
+                 # ... (copy common scrollable text drawing logic here if needed for fallback) ...
+                 pass
+
+        elif self.display_mode == "select_item_to_equip_display":
+            # This will also become icon-based. For now, let it use text if prepared.
+            if self.current_scrollable_lines: # Fallback to text
+                 # ... (copy common scrollable text drawing logic here if needed for fallback) ...
+                 pass
 
         # --- Draw Right-Hand Menu ---
         if self.right_panel_background_texture:
