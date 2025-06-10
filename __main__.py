@@ -425,6 +425,9 @@ class GameView(arcade.View):
         elif menu_type == "defeat_acknowledged_menu": # New menu after defeat messages are shown at camp
             options_text = ["Get Up"]
             self.current_menu_options = options_text
+        elif menu_type == "rest_screen_menu": # New menu for after resting/exhaustion
+            options_text = ["Get Up"]
+            self.current_menu_options = options_text
         elif menu_type == "item_details_menu": # Menu when an item is selected
             options_text = []
             if self.selected_inventory_item and self.selected_inventory_item.type in EQUIPABLE_TYPES:

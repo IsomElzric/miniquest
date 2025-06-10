@@ -176,28 +176,28 @@ class Inventory():
 
     def transfer_carried_to_strongbox(self, message_log_func):
         """Moves all items from stored_items (carried) to strongbox_items."""
-        message_log_func("--- Initiating transfer to strongbox ---")
-        message_log_func(f"Before transfer - Carried items: {[item.name for item in self.stored_items]}")
-        message_log_func(f"Before transfer - Strongbox items: {[item.name for item in self.strongbox_items]}")
+        # message_log_func("--- Initiating transfer to strongbox ---")
+        # message_log_func(f"Before transfer - Carried items: {[item.name for item in self.stored_items]}")
+        # message_log_func(f"Before transfer - Strongbox items: {[item.name for item in self.strongbox_items]}")
 
         if not self.stored_items:
             message_log_func("Your carry bags are already empty.")
-            message_log_func("--- Transfer to strongbox complete (no items to move) ---")
+            # message_log_func("--- Transfer to strongbox complete (no items to move) ---")
             return
 
         # It's good practice to iterate over a copy if you might modify the list,
         # but here we clear it *after* the loop, which is usually fine.
         # However, for debugging, let's be explicit.
-        items_being_transferred = list(self.stored_items) # Create a copy to iterate
+        # items_being_transferred = list(self.stored_items) # Create a copy to iterate
 
-        for item in items_being_transferred:
+        for item in list(self.stored_items): # Iterate over a copy directly
             self.strongbox_items.append(item)
-            message_log_func(f"Moved '{item.name}' to strongbox.")
+            # message_log_func(f"Moved '{item.name}' to strongbox.")
         self.stored_items.clear()
         message_log_func("You've transferred all carried items to your strongbox at camp.")
-        message_log_func(f"After transfer - Carried items: {[item.name for item in self.stored_items]}") # Should be empty
-        message_log_func(f"After transfer - Strongbox items: {[item.name for item in self.strongbox_items]}")
-        message_log_func("--- Transfer to strongbox complete ---")
+        # message_log_func(f"After transfer - Carried items: {[item.name for item in self.stored_items]}") # Should be empty
+        # message_log_func(f"After transfer - Strongbox items: {[item.name for item in self.strongbox_items]}")
+        # message_log_func("--- Transfer to strongbox complete ---")
 
     def open_bag(self):
         # for i in self.stored_items:

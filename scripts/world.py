@@ -125,18 +125,30 @@ class World():
         # print(f"DEBUG: Displaying area: {self.current_area.name}")
 
     def increment_time(self, value):
-        day_ended = self.day_cycle.increment_hour(value)
-        if day_ended:
-            self.rest()
+        """
+        Increments time. Returns "exhausted" if player becomes exhausted, None otherwise.
+        """
+        day_ended_by_exhaustion = self.day_cycle.increment_hour(value)
+        if day_ended_by_exhaustion:
+            return "exhausted" # Signal to the caller that exhaustion occurred
+        return None
 
     def rest(self):
+        """Handles player resting or collapsing from exhaustion. Returns new game state."""
+        original_hour = self.day_cycle.hour # Store original hour for exhaustion message
         self.day_cycle.reset_day() # Use DayCycle to reset time
         self.player.reset_health()
         self.set_location(self.camp)
         # transfer_carried_to_strongbox will be called by set_location if current_area becomes camp
-        # self.player.inventory.transfer_carried_to_strongbox(self.append_message) # Already handled by set_location
         # Message about resting and new dawn is now handled by DayCycle and set_location/display_current_area
-        self.append_message(f"You rested and recovered. You are now at your camp: {self.current_area.name}.")
+        if original_hour >= self.day_cycle.max_hours_before_exhaustion:
+            # DayCycle already logs "Exhaustion takes you."
+            self.append_message(f"You collapsed from exhaustion and awaken at your camp: {self.current_area.name}.")
+        else:
+            self.append_message(f"You rest and recover at your camp: {self.current_area.name}.")
+        # Messages for the "Get Up" screen are now set.
+        # The actual camp description will be logged when "Get Up" is pressed.
+        return "show_rest_screen"
 
     def display_location_options(self):
         options = ['Fight', 'Travel', 'Rest']
@@ -256,8 +268,7 @@ class World():
             self.available_travel_destinations = list(self.get_travel_options())
             return "travel_options" # Indicate to GUI to show travel options
         elif 'Rest' in choice_text:
-            self.rest()
-            return "area_description" # Resting usually just updates the area description
+            return self.rest() # This will return "show_rest_screen"
         elif 'Prepare' in choice_text:
             self.prepare()
             return "inventory_management" # GUI will switch to inventory view
@@ -337,17 +348,22 @@ class World():
             self.append_message("You decide not to travel at this time.")
             self.in_travel_selection_mode = False
             self.available_travel_destinations.clear()
-            self.display_current_area()
+            time_passage_result = self.increment_time(1) # Staying still takes some time
+            if time_passage_result == "exhausted":
+                return self.rest()
+            self.display_current_area() # Display current area if not exhausted
             return "area_description"
 
         # Check if the chosen destination is valid from current_area's connections
         if destination_name in self.current_area.get_connections():
             self.set_location(destination_name) # THIS IS THE CRITICAL LINE
-            self.increment_time(1) # Travel takes time
+            time_passage_result = self.increment_time(1) # Travel takes time
             self.append_message(f"You traveled to {destination_name}.")
             self.in_travel_selection_mode = False # Exit travel selection mode
             self.available_travel_destinations.clear() # Clear cache
-            self.display_current_area() # Update description for new area
+            if time_passage_result == "exhausted": # Check for exhaustion after travel
+                return self.rest()
+            self.display_current_area() # Update description for new area if not exhausted
             return "area_description"
         else:
             self.append_message(f"You cannot travel to '{destination_name}' from here.")
@@ -399,14 +415,18 @@ class World():
             # self.append_message('') # Spacing will be handled by loot messages or lack thereof
             
             dropped_item = self.active_combat_instance.generate_loot(self.player, self.current_combat_enemy)
-            self.increment_time(1)
+            time_passage_result = self.increment_time(1) # Combat encounter took time (moved here from loot decision)
             self._end_combat_sequence()
+
+            if time_passage_result == "exhausted":
+                return self.rest()
 
             if dropped_item:
                 self.pending_loot_item = dropped_item
                 self.in_loot_decision_mode = True
                 return "show_loot_options" # New state for GameView to trigger specific loot UI
             else:
+                # Time was already incremented above
                 return "area_description" # No loot, combat over
         else:
             # Enemy's turn
@@ -437,7 +457,7 @@ class World():
 
         if self.player.is_dead():
             self.append_message("You have been overcome and cannot continue fighting.") # Inform player
-            self.increment_time(1) # Combat took time
+            time_passage_result = self.increment_time(1) # Combat took time, check for exhaustion
             self._end_combat_sequence()
             self.player_defeated_retreat() # Immediately handle retreat (move to camp, log messages)
             return "show_defeat_log_at_camp" # New state for GameView to display this log at camp
@@ -457,9 +477,11 @@ class World():
         if flee_successful:
             self.append_message("You successfully fled from combat!")
             self.append_message('') # Add spacing
-            self.increment_time(1) # Fleeing takes time
+            time_passage_result = self.increment_time(1) # Fleeing takes time
             self._end_combat_sequence()
-            self.display_current_area() # Refresh current area description after fleeing
+            if time_passage_result == "exhausted":
+                return self.rest()
+            self.display_current_area() 
             return "area_description"
         # else: # If flee fails
         #     self.append_message("You failed to flee!")
