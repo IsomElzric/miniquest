@@ -18,7 +18,7 @@ ENEMY_PATH = os.path.join(ASSETS_DIR, 'enemies')
 ITEM_PATH = os.path.join(ASSETS_DIR, 'items')
 
 PLAYER_ATTACK = 10
-PLAYER_DEFENSE = 10
+PLAYER_DEFENSE = 3
 PLAYER_SPEED = 10
 
 class Builder():
