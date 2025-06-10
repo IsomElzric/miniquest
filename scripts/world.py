@@ -194,11 +194,50 @@ class World():
                 self._end_loot_decision_phase()
                 self.display_current_area() # Refresh area description
                 return "area_description"
+            elif choice_text == "Drop Item to Take": # New command from loot_decision_menu
+                if self.pending_loot_item:
+                    self.append_message(f"You consider dropping an item to make space for the {self.pending_loot_item.name}.")
+                    # Do NOT end loot decision phase here, as we are going to a sub-screen of it.
+                    return "select_item_to_drop_for_loot" # New state for GameView
+                else: # Should ideally not happen if the button was visible
+                    self.append_message("Error: No pending loot item to make space for.")
+                    self._end_loot_decision_phase() # End if something is wrong
+                    return "area_description" # Go back to area if error
+            elif choice_text.startswith("DropForLoot: "): # Player has clicked an item to drop
+                if not self.pending_loot_item:
+                    self.append_message("Error: No pending loot item to make space for.")
+                    self._end_loot_decision_phase() # Ensure phase ends if error
+                    self.display_current_area()
+                    return "area_description"
+
+                item_name_to_drop = choice_text.split(": ", 1)[1]
+                item_to_drop_obj = None
+                # Find the item to drop from the player's carried items
+                for item in self.player.inventory.stored_items:
+                    if item.name == item_name_to_drop:
+                        item_to_drop_obj = item
+                        break
+                
+                if item_to_drop_obj:
+                    # Attempt to drop the selected item
+                    drop_success = self.player.inventory.drop_item(item_to_drop_obj, "carried", self.append_message)
+                    print(f"DEBUG World: drop_item for '{item_to_drop_obj.name}' success: {drop_success}") # DEBUG
+                    if drop_success:
+                        # If drop successful, now try to add the pending loot item
+                        add_success = self.loot.add_item_to_inventory(self.player, self.pending_loot_item, self.append_message)
+                        print(f"DEBUG World: add_item_to_inventory for '{self.pending_loot_item.name}' success: {add_success}") # DEBUG
+                else:
+                    self.append_message(f"Could not find {item_name_to_drop} in your carried items to drop.")
+                
+                self._end_loot_decision_phase() # End loot decision regardless of outcome
+                self.display_current_area() # Refresh area description
+                return "area_description" # Return to main area view
             else:
                 # Fallback if the choice_text doesn't match expected commands for loot decision
                 self.append_message(f"Invalid choice during loot decision: {choice_text}")
                 return "show_loot_options" # Stay in loot decision mode
-        # "Drop Item to Take" and "DropForLoot" logic removed for this rollback.
+        # The standalone 'elif choice_text.startswith("DropForLoot: ")' block is no longer needed here,
+        # as its logic has been moved into the 'if self.in_loot_decision_mode:' block.
 
 
         if self.in_travel_selection_mode:

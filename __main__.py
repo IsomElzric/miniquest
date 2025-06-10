@@ -49,6 +49,7 @@ PLACEHOLDER_ART = os.path.join(LOCATION_ART_PATH, "placeholder.jpg") # Make sure
 TOP_BANNER_BACKGROUND_IMAGE = os.path.join(UI_ART_PATH, "background_banner_menu.png")
 GAME_VIEW_BANNER_BACKGROUND_IMAGE = os.path.join(UI_ART_PATH, "background_banner_game.png")
 MENU_VIEW_RIGHT_PANEL_BACKGROUND_IMAGE = os.path.join(UI_ART_PATH, "background_panel_menu.png")
+INVENTORY_BACKGROUND_IMAGE = os.path.join(UI_ART_PATH, "background_inventory.jpg") # New background for inventory
 GAME_VIEW_RIGHT_PANEL_BACKGROUND_IMAGE = os.path.join(UI_ART_PATH, "background_panel_menu.png") # Assuming same as menu for now
 
 # New constants for scrollable text areas
@@ -275,6 +276,13 @@ class GameView(arcade.View):
         self.placeholder_texture = None # To hold the loaded placeholder texture
         self.load_placeholder_texture() # Load placeholder once
 
+        # Load inventory background texture
+        self.inventory_background_texture = None
+        try:
+            self.inventory_background_texture = arcade.load_texture(INVENTORY_BACKGROUND_IMAGE)
+        except FileNotFoundError:
+            print(f"Warning: Inventory background image '{INVENTORY_BACKGROUND_IMAGE}' not found.")
+
         self.load_current_area_art()
 
         self.current_menu_options = []
@@ -392,7 +400,9 @@ class GameView(arcade.View):
                 # Offer to take if player can carry it
                 if self.world.player.inventory.can_carry_item(self.world.pending_loot_item):
                     options_text.insert(0, f"Take {item_name}") # Take option first
-                # "Drop item to make space" was removed for this rollback
+                else:
+                    # If cannot carry, offer to drop an item to make space
+                    options_text.insert(0, "Drop Item to Take")
             self.current_menu_options = options_text
         # elif menu_type == "player_defeated_flee_only": # This menu type is replaced
             # options_text = ["Flee Battle"] 
@@ -430,6 +440,9 @@ class GameView(arcade.View):
             self.current_menu_options = options_text
         
         # Create button sprites
+        elif menu_type == "select_item_to_drop_for_loot_menu": # Menu for selecting an item to drop
+            options_text = ["Cancel Drop"]
+            self.current_menu_options = options_text
         # Calculate the Y position for the top of the menu content area (below player banner)
         menu_content_area_top_y = SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT
         # Y position for the "Actions" title (anchored top)
@@ -535,6 +548,10 @@ class GameView(arcade.View):
                 # For loot decision, on_draw handles the primary display.
                 # We might add a title here if needed, but for now, it's icon-focused.
                 pass
+        elif self.display_mode == "select_item_to_drop_for_loot_display":
+            self.current_scrollable_lines.clear() # Icon-based display
+            self.scroll_offset_y = 0.0
+            pass # on_draw will handle the display
 
     def on_show_view(self):
         arcade.set_background_color(arcade.color.GRAY)
@@ -568,6 +585,83 @@ class GameView(arcade.View):
         
         # Fallback to default if specific icon couldn't be loaded or info is missing
         return self.default_item_icon_texture
+
+    def _draw_item_section_in_panel(self, title, items_list_or_dict, current_draw_y, text_color, is_dict_of_items=False, make_clickable=False, source_override=None):
+        """
+        Helper method to draw a section of items (equipped, carried, etc.) in the left panel.
+        Returns the new current_draw_y after drawing the section.
+        If make_clickable is True, it will also populate self.inventory_item_clickable_sprites.
+        source_override can be used if the source isn't determinable from items_list_or_dict directly.
+        """
+        arcade.draw_text(title, LEFT_PADDING, current_draw_y, text_color, font_size=TEXT_AREA_FONT_SIZE + 2, bold=True, anchor_y="top")
+        current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_SECTION_SPACING / 2)
+
+        items_with_source_info = [] # This list will hold dicts: {'item': obj, 'source': str, 'count': int}
+        
+        # Consolidate items and determine source/count
+        if is_dict_of_items: # For self.player.inventory.equipped_items
+            for slot, item_obj in items_list_or_dict.items():
+                if isinstance(item_obj, list): # Trinkets list
+                    for trinket in item_obj:
+                        if trinket: items_with_source_info.append({'item': trinket, 'source': f'equipped_{slot.lower()}', 'count': 1})
+                elif item_obj: # Single item in slot (Held, Body)
+                    items_with_source_info.append({'item': item_obj, 'source': f'equipped_{slot.lower()}', 'count': 1})
+        else: # For lists like stored_items, strongbox_items
+            current_source_name = source_override # Use override if provided
+            if current_source_name is None: # Attempt to determine if not overridden
+                if items_list_or_dict is self.player.inventory.stored_items:
+                    current_source_name = "carried"
+                elif items_list_or_dict is self.player.inventory.strongbox_items:
+                    current_source_name = "strongbox"
+                else:
+                    current_source_name = "unknown_list_source"
+            
+            item_name_counts = Counter(item.name for item in items_list_or_dict)
+            processed_item_names = set()
+            for item_obj in items_list_or_dict:
+                if item_obj.name not in processed_item_names:
+                    items_with_source_info.append({
+                        'item': item_obj, 
+                        'source': current_source_name, 
+                        'count': item_name_counts[item_obj.name]
+                    })
+                    processed_item_names.add(item_obj.name)
+        
+        if not items_with_source_info:
+            arcade.draw_text("(Empty)", LEFT_PADDING + ITEM_ICON_DRAW_SIZE[0] + 10, current_draw_y, text_color, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
+            current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_ICON_VERTICAL_SPACING)
+        else:
+            for item_info in items_with_source_info:
+                item = item_info['item']
+                count = item_info['count']
+                source = item_info['source']
+                icon_texture = self._get_item_icon_texture(item)
+
+                if icon_texture:
+                    arcade.draw_texture_rectangle(LEFT_PADDING + ITEM_ICON_DRAW_SIZE[0] / 2, 
+                                                  current_draw_y - ITEM_ICON_DRAW_SIZE[1] / 2, 
+                                                  ITEM_ICON_DRAW_SIZE[0], ITEM_ICON_DRAW_SIZE[1], 
+                                                  icon_texture)
+                
+                if make_clickable:
+                    clickable_sprite = arcade.SpriteSolidColor(ITEM_ICON_DRAW_SIZE[0], ITEM_ICON_DRAW_SIZE[1], (0,0,0,0)) # Invisible
+                    clickable_sprite.center_x = LEFT_PADDING + ITEM_ICON_DRAW_SIZE[0] / 2
+                    clickable_sprite.center_y = current_draw_y - ITEM_ICON_DRAW_SIZE[1] / 2
+                    clickable_sprite.properties['item_object'] = item
+                    clickable_sprite.properties['item_source'] = source
+                    self.inventory_item_clickable_sprites.append(clickable_sprite)
+
+                item_display_name = f"{item.name} ({item.type})"
+                if count > 1:
+                    item_display_name += f" x{count}"
+                
+                text_draw_y = current_draw_y - (ITEM_ICON_DRAW_SIZE[1] / 2) + (TEXT_AREA_LINE_HEIGHT / 2) - 4
+                arcade.draw_text(item_display_name, LEFT_PADDING + ITEM_TEXT_OFFSET_X, text_draw_y, 
+                                  text_color, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
+                current_draw_y -= (max(ITEM_ICON_DRAW_SIZE[1], TEXT_AREA_LINE_HEIGHT) + ITEM_ICON_VERTICAL_SPACING)
+        
+        current_draw_y -= ITEM_SECTION_SPACING
+        return current_draw_y
 
     def on_draw(self):
         self.clear()
@@ -666,49 +760,80 @@ class GameView(arcade.View):
         # --- Draw Main Game Area (Left 512x512) ---
         game_area_y_center = (SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT) / 2
         
-        # Draw the background image for the current area, or the placeholder, or fallback color
-        if self.game_area_background:
+        # Determine which background to draw for the main game panel
+        background_to_draw = self.game_area_background # Default to current area art
+
+        if self.display_mode in ["inventory_management", "view_bags", "item_details_display"]:
+            if self.inventory_background_texture:
+                background_to_draw = self.inventory_background_texture
+            else:
+                # Fallback for inventory if its specific background isn't loaded,
+                # but still different from area art to indicate a special view.
+                arcade.draw_rectangle_filled(
+                    GAME_AREA_WIDTH / 2,
+                    game_area_y_center,
+                    GAME_AREA_WIDTH,
+                    SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT,
+                    arcade.color.DARK_SLATE_GRAY # A neutral fallback color
+                )
+                background_to_draw = None # Ensure we don't try to draw it as a texture
+        
+        if background_to_draw: # If a texture is selected (either area or inventory)
             arcade.draw_texture_rectangle(
                 GAME_AREA_WIDTH / 2,
                 game_area_y_center,
                 GAME_AREA_WIDTH,
                 SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT,
-                self.game_area_background,
+                background_to_draw,
             )
-        else:
+        elif not self.display_mode in ["inventory_management", "view_bags"]: 
+            # Fallback for general game area if no specific art or placeholder is loaded
             # Fallback if no image (not even placeholder) found
             arcade.draw_rectangle_filled(
                 GAME_AREA_WIDTH / 2,
                 game_area_y_center,
                 GAME_AREA_WIDTH,
                 SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT,
-                arcade.color.DARK_OLIVE_GREEN
+                arcade.color.DARK_OLIVE_GREEN # Original fallback for area art
             )
 
         # Overlay text description for the current area OR combat log
         description_x = LEFT_PADDING
         description_y = game_area_y_center + (SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT) / 2 - TOP_PADDING
-        # Original: description_width = GAME_AREA_WIDTH - 2 * LEFT_PADDING
         description_width = GAME_AREA_WIDTH - (2 * LEFT_PADDING) - 5 # Add a small buffer (e.g., 5 pixels)
-        text_bg_height = 150 # Adjust based on content. For log, it might need to be taller.
         
-        # Calculate the actual height and center Y for the background rectangle
-        # to ensure it covers text that might draw slightly below the nominal text_bg_height
-        effective_background_height = text_bg_height + (2 * TEXT_AREA_LINE_HEIGHT) # Extend by two line heights
-        effective_background_center_y = description_y - (effective_background_height / 2)
+        # Determine dimensions for the semi-transparent background
+        bg_rect_center_x = GAME_AREA_WIDTH / 2
+        bg_rect_width = GAME_AREA_WIDTH # Default to full panel width
+        
+        # Default height and Y for log/description views (smaller box)
+        text_box_height_for_log = 150 
+        bg_rect_height = text_box_height_for_log + (2 * TEXT_AREA_LINE_HEIGHT) 
+        bg_rect_center_y = description_y - (bg_rect_height / 2) # Positioned relative to text area top
 
-        # Draw a semi-transparent background for the text overlay
+        # For inventory and loot views, make the background cover the entire game panel area
+        inventory_views = [
+            "inventory_management", "view_bags", 
+            "loot_decision_display", "select_item_to_drop_for_loot_display",
+            "item_details_display", "select_item_to_equip_display" # Added for consistency
+        ]
+        if self.display_mode in inventory_views:
+            bg_rect_height = SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT # Full panel height
+            bg_rect_center_y = (SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT) / 2 # Center of the panel
+            # Width is already GAME_AREA_WIDTH
+
+        # Draw the semi-transparent background
         arcade.draw_rectangle_filled(
-            GAME_AREA_WIDTH / 2,
-            effective_background_center_y, # Use new center_y
-            description_width + 20,
-            effective_background_height, # Use new height
+            bg_rect_center_x,
+            bg_rect_center_y, 
+            bg_rect_width,
+            bg_rect_height, 
             (0, 0, 0, 180) # Slightly more opaque for readability
         )       
 
         # --- Determine parameters for scrollable text based on display_mode ---
         _scroll_area_top_y_for_lines = description_y  # Default: top of the text box
-        _scroll_area_height_for_lines = text_bg_height # Default: full height of text box
+        _scroll_area_height_for_lines = text_box_height_for_log # Default: height for log/description text
         _line_font_size = TEXT_AREA_FONT_SIZE
         _text_color_for_mode = arcade.color.LIGHT_GRAY # Default color for text
 
@@ -734,7 +859,7 @@ class GameView(arcade.View):
             )
 
             _scroll_area_top_y_for_lines = description_y - (name_font_size + spacing_after_name)
-            _scroll_area_height_for_lines = text_bg_height - (name_font_size + spacing_after_name)
+            _scroll_area_height_for_lines = text_box_height_for_log - (name_font_size + spacing_after_name) # Use defined variable
             _line_font_size = TEXT_AREA_FONT_SIZE # Already default
             _text_color_for_mode = arcade.color.LIGHT_GRAY # Already default
 
@@ -790,82 +915,65 @@ class GameView(arcade.View):
             # --- Draw Icon-Based Inventory for "Prepare" menu ---
             current_draw_y = _scroll_area_top_y_for_lines # Start drawing from the top of the defined area
             self.inventory_item_clickable_sprites.clear() # Clear old clickable sprites
-            
-            # Helper function to draw an item section
-            def draw_item_section(title, items_list_or_dict, is_dict_of_items=False, is_list_of_dicts=False):
-                nonlocal current_draw_y
-                arcade.draw_text(title, description_x, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE + 2, bold=True, anchor_y="top")
-                current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_SECTION_SPACING / 2)
+            current_draw_y = self._draw_item_section_in_panel("== Equipped Items ==", self.player.inventory.equipped_items, current_draw_y, _text_color_for_mode, is_dict_of_items=True, make_clickable=True)
+            current_draw_y = self._draw_item_section_in_panel("== Carried Items (Bags) ==", self.player.inventory.stored_items, current_draw_y, _text_color_for_mode, make_clickable=True)
+            current_draw_y = self._draw_item_section_in_panel("== Strongbox (Camp) ==", self.player.inventory.strongbox_items, current_draw_y, _text_color_for_mode, make_clickable=True)
 
-                # Collect items with their source for creating clickable sprites
-                items_with_source_info = []
-                if is_dict_of_items: # For equipped_items
-                    for slot, item_obj in items_list_or_dict.items():
-                        if isinstance(item_obj, list): # Trinkets
-                            for trinket in item_obj:
-                                if trinket: items_with_source_info.append({'item': trinket, 'source': f'equipped_{slot.lower()}'})
-                        elif item_obj:
-                            items_with_source_info.append({'item': item_obj, 'source': f'equipped_{slot.lower()}'})
-                elif is_list_of_dicts: # For available_items_to_equip
-                     for item_info in items_list_or_dict: # Corrected variable name here
-                         items_with_source_info.append({'item': item_info['item'], 'source': item_info.get('source', 'unknown')})
-                else: # For stored_items, strongbox_items (lists of item objects)
-                    current_source_name = "unknown"
-                    if items_list_or_dict is self.player.inventory.stored_items:
-                        current_source_name = "carried"
-                    elif items_list_or_dict is self.player.inventory.strongbox_items:
-                        current_source_name = "strongbox"
-                    
-                    # Use Counter to group items by name for display counts
-                    item_name_counts = Counter(item.name for item in items_list_or_dict)
-                    
-                    # Create unique entries for items_with_source_info, including their counts
+        elif self.display_mode == "view_bags":
+            current_draw_y = _scroll_area_top_y_for_lines
+            self.inventory_item_clickable_sprites.clear() # Not clickable in "view_bags"
+
+            arcade.draw_text("--- Equipment ---", description_x, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE + 2, bold=True, anchor_y="top")
+            current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_SECTION_SPACING / 2)
+
+            current_draw_y = self._draw_item_section_in_panel("== Equipped Items ==", self.player.inventory.equipped_items, current_draw_y, _text_color_for_mode, is_dict_of_items=True, make_clickable=False)
+            # The old "Carried Items (Bags)" full list is removed.
+
+            # --- Draw Bag Pockets & Capacities Section ---
+            current_draw_y -= ITEM_SECTION_SPACING # Space after equipped, before pockets
+            arcade.draw_text("--- Bag Pockets & Capacities ---", description_x, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE + 2, bold=True, anchor_y="top")
+            current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_SECTION_SPACING / 2)
+
+            pocket_names_map = {
+                'crafting': "Main Bag (Crafting)",
+                'trinket': "Front Pouch (Trinkets)",
+                'weapon': "Tied On the Side (Weapons)",
+                'wealth': "Side Pouch (Wealth)",
+                'armor': "Strapped Below (Armor)" # Added armor here, ensure it's in carry_capacities
+            }
+
+            # Iterate through defined carry capacities to maintain order and ensure only relevant pockets are shown
+            for item_type_key, max_capacity in self.player.inventory.carry_capacities.items():
+                pocket_display_name = pocket_names_map.get(item_type_key, f"{item_type_key.capitalize()} Pocket") # Fallback name
+                
+                arcade.draw_text(f"== {pocket_display_name} ==", description_x, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE + 1, bold=True, anchor_y="top")
+                current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_ICON_VERTICAL_SPACING / 2)
+
+                items_in_this_pocket = [item for item in self.player.inventory.stored_items if item.type == item_type_key]
+                
+                if not items_in_this_pocket:
+                    arcade.draw_text("(Empty)", description_x + ITEM_TEXT_OFFSET_X, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
+                    current_draw_y -= TEXT_AREA_LINE_HEIGHT
+                else:
+                    item_name_counts = Counter(item.name for item in items_in_this_pocket)
                     processed_item_names = set()
-                    for item_obj in items_list_or_dict: # Iterate through the original list to get item objects
+                    for item_obj in items_in_this_pocket:
                         if item_obj.name not in processed_item_names:
-                            items_with_source_info.append({
-                                'item': item_obj, 
-                                'source': current_source_name, 
-                                'count': item_name_counts[item_obj.name]})
+                            icon_texture = self._get_item_icon_texture(item_obj)
+                            if icon_texture:
+                                arcade.draw_texture_rectangle(description_x + ITEM_ICON_DRAW_SIZE[0] / 2, current_draw_y - ITEM_ICON_DRAW_SIZE[1] / 2, ITEM_ICON_DRAW_SIZE[0], ITEM_ICON_DRAW_SIZE[1], icon_texture)
+                            
+                            display_name = f"{item_obj.name} ({item_obj.type})"
+                            count = item_name_counts[item_obj.name]
+                            if count > 1:
+                                display_name += f" x{count}"
+                            arcade.draw_text(display_name, description_x + ITEM_TEXT_OFFSET_X, current_draw_y - (ITEM_ICON_DRAW_SIZE[1] / 2) + (TEXT_AREA_LINE_HEIGHT / 2) - 4, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
+                            current_draw_y -= (max(ITEM_ICON_DRAW_SIZE[1], TEXT_AREA_LINE_HEIGHT) + ITEM_ICON_VERTICAL_SPACING)
                             processed_item_names.add(item_obj.name)
                 
-                if not items_with_source_info:
-                    arcade.draw_text("(Empty)", description_x + ITEM_ICON_DRAW_SIZE[0] + 10, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
-                    current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_ICON_VERTICAL_SPACING)
-                else:
-                    for current_item_info in items_with_source_info: # Iterate over the populated list
-                        item = current_item_info['item'] # Extract the item object
-                        icon_texture = self._get_item_icon_texture(item)
-                        if icon_texture:
-                            arcade.draw_texture_rectangle(description_x + ITEM_ICON_DRAW_SIZE[0] / 2, 
-                                                          current_draw_y - ITEM_ICON_DRAW_SIZE[1] / 2, # Center icon vertically
-                                                          ITEM_ICON_DRAW_SIZE[0], ITEM_ICON_DRAW_SIZE[1], 
-                                                          icon_texture)
-                        
-                        # Create a clickable sprite (can be invisible or a simple rect for debugging)
-                        clickable_sprite = arcade.SpriteSolidColor(ITEM_ICON_DRAW_SIZE[0], ITEM_ICON_DRAW_SIZE[1], (0,0,0,0)) # Invisible
-                        clickable_sprite.center_x = description_x + ITEM_ICON_DRAW_SIZE[0] / 2
-                        clickable_sprite.center_y = current_draw_y - ITEM_ICON_DRAW_SIZE[1] / 2
-                        clickable_sprite.properties['item_object'] = item
-                        clickable_sprite.properties['item_source'] = current_item_info['source'] # Use source from current_item_info
-                        self.inventory_item_clickable_sprites.append(clickable_sprite)
-
-                        item_display_name = f"{item.name} ({item.type})"
-                        item_count = current_item_info.get('count') # Get the count
-                        if item_count and item_count > 1:
-                            item_display_name += f" x{item_count}"
-                        # Add quantity for stackable items if applicable (e.g. from Counter)
-                        # For now, just name and type.
-                        # Adjust text Y to align with top of icon, or center of icon row
-                        text_draw_y = current_draw_y - (ITEM_ICON_DRAW_SIZE[1] / 2) + (TEXT_AREA_LINE_HEIGHT / 2) - 4 # Try to center with icon
-                        arcade.draw_text(item_display_name, description_x + ITEM_TEXT_OFFSET_X, text_draw_y, # Use text_draw_y
-                                          _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
-                        current_draw_y -= (max(ITEM_ICON_DRAW_SIZE[1], TEXT_AREA_LINE_HEIGHT) + ITEM_ICON_VERTICAL_SPACING)
-                current_draw_y -= ITEM_SECTION_SPACING # Space before next section
-
-            draw_item_section("== Equipped Items ==", self.player.inventory.equipped_items, is_dict_of_items=True)
-            draw_item_section("== Carried Items (Bags) ==", self.player.inventory.stored_items)
-            draw_item_section("== Strongbox (Camp) ==", self.player.inventory.strongbox_items)
+                capacity_text = f"Capacity: {len(items_in_this_pocket)} / {max_capacity}"
+                arcade.draw_text(capacity_text, description_x + ITEM_TEXT_OFFSET_X, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE -1, anchor_y="top")
+                current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_SECTION_SPACING) # Space before next pocket
 
         elif self.display_mode == "loot_decision_display":
             current_draw_y = _scroll_area_top_y_for_lines
@@ -910,8 +1018,47 @@ class GameView(arcade.View):
                     arcade.draw_text(f"{item.name} ({item.type})", description_x + ITEM_TEXT_OFFSET_X, current_draw_y - (ITEM_ICON_DRAW_SIZE[1] / 2) + (TEXT_AREA_LINE_HEIGHT / 2) - 4, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
                     current_draw_y -= (max(ITEM_ICON_DRAW_SIZE[1], TEXT_AREA_LINE_HEIGHT) + ITEM_ICON_VERTICAL_SPACING)
 
-        elif self.display_mode == "view_bags" or self.display_mode == "select_item_to_equip_display" or self.display_mode == "item_details_display":
-            if self.current_scrollable_lines:
+        elif self.display_mode == "select_item_to_drop_for_loot_display":
+            current_draw_y = _scroll_area_top_y_for_lines
+            self.inventory_item_clickable_sprites.clear() # Clickable sprites will be added in the next step
+
+            arcade.draw_text("--- Drop Item to Take ---", description_x, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE + 2, bold=True, anchor_y="top")
+            current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_SECTION_SPACING / 2)
+
+            pending_item = self.world.pending_loot_item
+            if pending_item:
+                arcade.draw_text(f"New Item: {pending_item.name} ({pending_item.type})", description_x + ITEM_TEXT_OFFSET_X, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
+                icon_texture = self._get_item_icon_texture(pending_item)
+                if icon_texture:
+                    arcade.draw_texture_rectangle(description_x + ITEM_ICON_DRAW_SIZE[0] / 2, current_draw_y - ITEM_ICON_DRAW_SIZE[1] / 2, ITEM_ICON_DRAW_SIZE[0], ITEM_ICON_DRAW_SIZE[1], icon_texture)
+                current_draw_y -= (max(ITEM_ICON_DRAW_SIZE[1], TEXT_AREA_LINE_HEIGHT) + ITEM_ICON_VERTICAL_SPACING * 2) # Extra spacing
+
+            arcade.draw_text("--- Your Carried Items ---", description_x, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE + 2, bold=True, anchor_y="top")
+            current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_SECTION_SPACING / 2)
+
+            if not self.player.inventory.stored_items:
+                arcade.draw_text("(Bags are empty - cannot drop)", description_x + ITEM_TEXT_OFFSET_X, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
+            else:
+                # Display carried items (icons and names) - not yet clickable
+                for item_obj in self.player.inventory.stored_items: # Iterate through actual item objects
+                    icon_texture = self._get_item_icon_texture(item_obj)
+                    
+                    # Create a clickable sprite for this item
+                    clickable_sprite = arcade.SpriteSolidColor(ITEM_ICON_DRAW_SIZE[0], ITEM_ICON_DRAW_SIZE[1], (0,0,0,0)) # Invisible
+                    clickable_sprite.center_x = description_x + ITEM_ICON_DRAW_SIZE[0] / 2
+                    clickable_sprite.center_y = current_draw_y - ITEM_ICON_DRAW_SIZE[1] / 2
+                    clickable_sprite.properties['item_object'] = item_obj # Store the actual item object
+                    clickable_sprite.properties['item_source'] = "carried_for_loot_drop" # Specific source for this context
+                    self.inventory_item_clickable_sprites.append(clickable_sprite)
+
+                    if icon_texture:
+                        arcade.draw_texture_rectangle(description_x + ITEM_ICON_DRAW_SIZE[0] / 2, current_draw_y - ITEM_ICON_DRAW_SIZE[1] / 2, ITEM_ICON_DRAW_SIZE[0], ITEM_ICON_DRAW_SIZE[1], icon_texture)
+                    arcade.draw_text(f"{item_obj.name} ({item_obj.type})", description_x + ITEM_TEXT_OFFSET_X, current_draw_y - (ITEM_ICON_DRAW_SIZE[1] / 2) + (TEXT_AREA_LINE_HEIGHT / 2) - 4, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
+                    current_draw_y -= (max(ITEM_ICON_DRAW_SIZE[1], TEXT_AREA_LINE_HEIGHT) + ITEM_ICON_VERTICAL_SPACING)
+
+        # Adjusted this condition to avoid re-processing "view_bags"
+        elif self.display_mode == "select_item_to_equip_display" or self.display_mode == "item_details_display":
+            if self.current_scrollable_lines: # This is for text-based details, not icon views
                 first_visible_line_idx = int(self.scroll_offset_y / TEXT_AREA_LINE_HEIGHT)
                 lines_in_view = int(_scroll_area_height_for_lines / TEXT_AREA_LINE_HEIGHT)
                 for i in range(len(self.current_scrollable_lines)):
@@ -1056,6 +1203,14 @@ class GameView(arcade.View):
                     self._prepare_scrollable_text_for_current_mode()
                     return # Handled locally
 
+                elif command == "Cancel Drop" and self.active_menu_type == "select_item_to_drop_for_loot_menu":
+                    # Go back to the initial loot decision screen
+                    self.display_mode = "loot_decision_display"
+                    self.update_menu_options("loot_decision_menu")
+                    self.log_messages_to_display.clear() # Messages are implicit in the view
+                    self._prepare_scrollable_text_for_current_mode()
+                    return # Handled locally
+
 
                 elif command == "Equip" and self.active_menu_type == "item_details_menu":
                     if self.selected_inventory_item and self.selected_item_source:
@@ -1105,6 +1260,24 @@ class GameView(arcade.View):
                     self.log_messages_to_display.clear()
                     self._prepare_scrollable_text_for_current_mode()
                     return # Handled this specific command
+                
+                # Explicit handler for "Drop Item to Take" from loot_decision_menu
+                elif command == "Drop Item to Take":
+                    next_game_state = self.world.handle_player_choice(command)
+                    # print(f"DEBUG: World returned '{next_game_state}' for 'Drop Item to Take'") # Keep for testing if needed
+                    self.log_messages_to_display.clear()
+                    self.log_messages_to_display.extend(self.world.get_messages())
+                    
+                    if next_game_state == "select_item_to_drop_for_loot":
+                        self.display_mode = "select_item_to_drop_for_loot_display"
+                        self.update_menu_options("select_item_to_drop_for_loot_menu")
+                    else:
+                        # Fallback: if world doesn't return expected, stay in loot decision
+                        # print(f"Warning: Unexpected state '{next_game_state}' from world for 'Drop Item to Take'. Staying in loot decision.")
+                        self.display_mode = "loot_decision_display"
+                        self.update_menu_options("loot_decision_menu")
+                    self._prepare_scrollable_text_for_current_mode()
+                    return # Handled this specific command
 
                 elif command == "Back" and self.active_menu_type == "view_bags_menu": # Specifically "Back" from bags view
                     self.display_mode = self.pre_bags_view_mode if self.pre_bags_view_mode else "area_description"
@@ -1113,6 +1286,7 @@ class GameView(arcade.View):
                     
                     self.log_messages_to_display.clear()
                     if self.display_mode == "area_description":
+                        self.world.display_current_area() # Ensure world log is repopulated
                         # If returning to area description, fetch any pending messages from world
                         # (e.g., if "Check Bags" was used during travel prompt)
                         self.log_messages_to_display.extend(self.world.get_messages()) 
@@ -1160,7 +1334,9 @@ class GameView(arcade.View):
                 elif next_game_state == "select_item_to_equip_mode": # World wants us to show item selection
                     self.display_mode = "select_item_to_equip_display"
                     self.update_menu_options("select_item_to_equip_menu")
-                    # Log messages (like "Select an item...") are already added by world
+                elif next_game_state == "select_item_to_drop_for_loot": # New state from World
+                    self.display_mode = "select_item_to_drop_for_loot_display"
+                    self.update_menu_options("select_item_to_drop_for_loot_menu")
                 elif next_game_state == "area_description": # Combat ended, or general action
                     self.display_mode = "area_description"
                     self.update_menu_options("main") # Rebuild main action buttons
@@ -1187,6 +1363,31 @@ class GameView(arcade.View):
                         self.log_messages_to_display.clear() # Clear previous log/description
                         self._prepare_scrollable_text_for_current_mode() # Prepare item details text
                         return # Handled click on item icon
+            elif self.display_mode == "select_item_to_drop_for_loot_display":
+                # Check for clicks on the carried item icons in this specific view
+                clicked_item_sprites = arcade.get_sprites_at_point((x,y), self.inventory_item_clickable_sprites)
+                if clicked_item_sprites:
+                    clicked_item_sprite = clicked_item_sprites[0]
+                    item_to_drop = clicked_item_sprite.properties.get('item_object')
+                    
+                    if item_to_drop:
+                        print(f"Player chose to drop: {item_to_drop.name} to make space for loot.")
+                        # Send command to world to drop this item and then take the pending loot
+                        self.log_messages_to_display.clear()
+                        next_game_state = self.world.handle_player_choice(f"DropForLoot: {item_to_drop.name}")
+                        self.log_messages_to_display.extend(self.world.get_messages())
+                        print(f"DEBUG GameView: After DropForLoot, world returned next_game_state='{next_game_state}'") # DEBUG
+                        
+                        # After dropping and taking, the world should return "area_description"
+                        if next_game_state == "area_description":
+                            self.display_mode = "area_description"
+                            self.update_menu_options("main")
+                        else:
+                            # This case means the world didn't return the expected state to fully exit the loot sequence.
+                            print(f"WARNING GameView: Unexpected next_game_state '{next_game_state}' after DropForLoot. Loot sequence might not have fully completed as expected by GameView.")
+                            # Potentially, GameView should react to other states if the world can return them here.
+                        self._prepare_scrollable_text_for_current_mode()
+                        return # Handled click on item to drop
             # If not an icon click, then clicks outside the right-hand menu do nothing.
 
     def on_update(self, delta_time: float):

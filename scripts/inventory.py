@@ -18,6 +18,7 @@ class Inventory():
         # Define maximum number of *un-equipped* items of each type the player can carry
         self.carry_capacities = {
             'weapon': 1,
+            'armor': 1,
             'crafting': 3,
             'wealth': 5,
             'trinket': 2
