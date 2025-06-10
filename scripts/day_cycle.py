@@ -20,6 +20,7 @@ class DayCycle:
         # self.message_log(f"Hour: {self.hour}") # Removed, as hour is in the top panel
 
         if self.hour >= self.max_hours_before_exhaustion:
+            self.message_log('') # Add a blank line for spacing before exhaustion message
             self.message_log('Exhaustion takes you.')
             return True # Indicates day should end / player should rest
 
