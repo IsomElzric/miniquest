@@ -60,7 +60,7 @@ class Combat():
     
     def generate_loot(self, player, defeated_enemy): 
         """Determines loot drop, logs finding it, and returns the item (or None)."""
-        drop = self.loot.get_drop_by_area(defeated_enemy, self.area) # Loot based on defeated enemy
+        drop = self.loot.get_drop_by_area(player, self.area) # CORRECTED: Pass the actual player object
         if drop:
             self.message_log(f'As the creature lays dead you find a {drop.name}!') # Changed from .append
             return drop # Return the item to be handled by World

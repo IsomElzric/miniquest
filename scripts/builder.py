@@ -17,6 +17,10 @@ LOCATION_PATH = os.path.join(ASSETS_DIR, 'locations')
 ENEMY_PATH = os.path.join(ASSETS_DIR, 'enemies')
 ITEM_PATH = os.path.join(ASSETS_DIR, 'items')
 
+PLAYER_ATTACK = 10
+PLAYER_DEFENSE = 10
+PLAYER_SPEED = 10
+
 class Builder():
     def __init__(self, message_log) -> None:  # Accept message_log here
         self.player = Entity()
@@ -28,9 +32,9 @@ class Builder():
         self.player.name = "Nameless Adventurer" # Default name
         
         # Default stats for a balanced start
-        self.player.attack = 3
-        self.player.defense = 3
-        self.player.speed = 3
+        self.player.attack = PLAYER_ATTACK
+        self.player.defense = PLAYER_DEFENSE
+        self.player.speed = PLAYER_SPEED
         
         self.player.update_stats()
         self.player.reset_health()
