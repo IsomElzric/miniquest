@@ -197,6 +197,34 @@ class World():
                 # Fallback if the choice_text doesn't match expected commands for loot decision
                 self.append_message(f"Invalid choice during loot decision: {choice_text}")
                 return "show_loot_options" # Stay in loot decision mode
+        elif choice_text == "Drop Item to Take": # New command from loot_decision_menu
+            if self.pending_loot_item:
+                self.append_message(f"You consider dropping an item to make space for the {self.pending_loot_item.name}.")
+                return "select_item_to_drop_for_loot" # New state for GameView
+            return "show_loot_options" # Fallback if no pending loot
+        elif choice_text.startswith("DropForLoot: "):
+            if not self.pending_loot_item:
+                self.append_message("Error: No pending loot item to make space for.")
+                self._end_loot_decision_phase()
+                return "area_description"
+
+            item_name_to_drop = choice_text.split(": ", 1)[1]
+            item_to_drop_obj = None
+            for item in self.player.inventory.stored_items: # Check only carried items
+                if item.name == item_name_to_drop:
+                    item_to_drop_obj = item
+                    break
+            
+            if item_to_drop_obj:
+                if self.player.inventory.drop_item(item_to_drop_obj, "carried", self.append_message):
+                    # Now that space is made, try to add the pending loot item
+                    self.loot.add_item_to_inventory(self.player, self.pending_loot_item, self.append_message)
+            else:
+                self.append_message(f"Could not find {item_name_to_drop} in your carried items to drop.")
+            
+            self._end_loot_decision_phase() # End loot decision regardless of outcome
+            self.display_current_area()
+            return "area_description" # Corrected: After dropping and taking, go back to area
 
         if self.in_travel_selection_mode:
             return self.handle_travel_choice(choice_text)
