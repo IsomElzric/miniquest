@@ -297,6 +297,7 @@ class GameView(arcade.View):
         self.scroll_offset_y = 0.0  # How many pixels the text content has been scrolled up
         self.current_scrollable_lines = [] # Stores the pre-wrapped lines for the current view
         self.scrollable_text_rect_on_screen = None # To store screen coords of the text box for scroll detection
+        self.current_view_content_height = 0.0 # Total height of content for current view (text or icons)
 
         # For "Check Bags" functionality
         self.pre_bags_view_mode = None
@@ -467,6 +468,7 @@ class GameView(arcade.View):
         self.scroll_offset_y = 0.0  
 
         if not full_text_content:
+            self.current_view_content_height = 0.0 # Ensure height is zeroed if no content
             return
 
         avg_char_width = font_size_for_metric * 0.65 
@@ -490,9 +492,11 @@ class GameView(arcade.View):
                                                    replace_whitespace=False, drop_whitespace=False,
                                                    break_long_words=True, break_on_hyphens=True))
         self.current_scrollable_lines = wrapped_lines
+        self.current_view_content_height = len(self.current_scrollable_lines) * TEXT_AREA_LINE_HEIGHT
 
     def _prepare_scrollable_text_for_current_mode(self):
         consistent_text_area_width = GAME_AREA_WIDTH - (2 * LEFT_PADDING) - 5 
+        self.current_view_content_height = 0.0 # Reset for each mode prep
 
         if self.display_mode == "welcome_screen":
             self._prepare_scrollable_text("\n".join(self.log_messages_to_display), TEXT_AREA_FONT_SIZE, consistent_text_area_width)
@@ -500,11 +504,16 @@ class GameView(arcade.View):
             self._prepare_scrollable_text("\n".join(self.log_messages_to_display), TEXT_AREA_FONT_SIZE, consistent_text_area_width)
         elif self.display_mode == "combat_log":
             self._prepare_scrollable_text("\n".join(self.log_messages_to_display), LOG_AREA_FONT_SIZE, consistent_text_area_width)
-        elif self.display_mode in ["inventory_management", "view_bags", "select_item_to_equip_display"]:
+        elif self.display_mode in ["inventory_management", "view_bags", 
+                                   "loot_decision_display", "select_item_to_drop_for_loot_display"]:
             self.current_scrollable_lines.clear() 
             self.scroll_offset_y = 0.0
-            pass 
-        elif self.display_mode == "item_details_display" or self.display_mode == "loot_decision_display":
+            self.current_view_content_height = self._calculate_icon_view_content_height(self.display_mode)
+        elif self.display_mode in ["select_item_to_equip_display"]: 
+            # For select_item_to_equip_display, messages are typically short prompts.
+            # If it becomes a long list, this might need its own height calculation or be icon-based.
+            self._prepare_scrollable_text("\n".join(self.log_messages_to_display), TEXT_AREA_FONT_SIZE, consistent_text_area_width)
+        elif self.display_mode == "item_details_display": 
             self.current_scrollable_lines.clear()
             self.scroll_offset_y = 0.0
             if self.selected_inventory_item:
@@ -512,18 +521,108 @@ class GameView(arcade.View):
                 details_text += f"Type: {self.selected_inventory_item.type}\n\n"
                 details_text += f"Description:\n{self.selected_inventory_item.description}"
                 self._prepare_scrollable_text(details_text, TEXT_AREA_FONT_SIZE, consistent_text_area_width)
-            elif self.world.pending_loot_item and self.display_mode == "loot_decision_display":
-                pass
-        elif self.display_mode == "select_item_to_drop_for_loot_display":
-            self.current_scrollable_lines.clear() 
+            else: # No selected item, clear content height
+                self.current_view_content_height = 0.0
+        else: # Fallback for any unhandled display modes
+            self.current_scrollable_lines.clear()
             self.scroll_offset_y = 0.0
-            pass 
+            self.current_view_content_height = 0.0 
 
     def on_show_view(self):
         arcade.set_background_color(arcade.color.GRAY)
         self.update_menu_options("welcome_menu") 
         self.log_messages_to_display = self.world.get_messages() 
         self._prepare_scrollable_text_for_current_mode() 
+
+    def _calculate_icon_view_content_height(self, display_mode_to_calculate):
+        """Calculates the total potential vertical height of icon-based views."""
+        height = 0.0
+        item_row_h = (max(ITEM_ICON_DRAW_SIZE[1], TEXT_AREA_LINE_HEIGHT) + ITEM_ICON_VERTICAL_SPACING)
+        section_title_h = TEXT_AREA_LINE_HEIGHT + ITEM_SECTION_SPACING / 2
+        empty_line_h = TEXT_AREA_LINE_HEIGHT + ITEM_ICON_VERTICAL_SPACING # Height for an "(Empty)" line
+        capacity_line_h = TEXT_AREA_LINE_HEIGHT
+
+        if display_mode_to_calculate == "inventory_management":
+            # Equipped Items
+            height += section_title_h
+            num_equipped = 0
+            if self.player.inventory.equipped_items.get('Held'): num_equipped += 1
+            if self.player.inventory.equipped_items.get('Body'): num_equipped += 1
+            num_equipped += len(self.player.inventory.equipped_items.get('Trinkets', []))
+            height += num_equipped * item_row_h if num_equipped > 0 else empty_line_h
+            height += ITEM_SECTION_SPACING
+            # Carried Items
+            height += section_title_h
+            height += len(set(item.name for item in self.player.inventory.stored_items)) * item_row_h if self.player.inventory.stored_items else empty_line_h
+            height += ITEM_SECTION_SPACING
+            # Strongbox Items
+            height += section_title_h
+            height += len(set(item.name for item in self.player.inventory.strongbox_items)) * item_row_h if self.player.inventory.strongbox_items else empty_line_h
+            height += ITEM_SECTION_SPACING
+
+        elif display_mode_to_calculate == "view_bags":
+            height += section_title_h # "--- Equipment ---"
+            # Equipped
+            height += section_title_h # "== Equipped Items =="
+            num_equipped = 0
+            if self.player.inventory.equipped_items.get('Held'): num_equipped += 1
+            if self.player.inventory.equipped_items.get('Body'): num_equipped += 1
+            num_equipped += len(self.player.inventory.equipped_items.get('Trinkets', []))
+            height += num_equipped * item_row_h if num_equipped > 0 else empty_line_h
+            height += ITEM_SECTION_SPACING
+
+            height += ITEM_SECTION_SPACING # Space before pockets
+            height += section_title_h # "--- Bag Pockets & Capacities ---"
+            for item_type_key, _ in self.player.inventory.carry_capacities.items():
+                height += TEXT_AREA_LINE_HEIGHT + ITEM_ICON_VERTICAL_SPACING / 2 # Pocket title (e.g., == Main Bag (Crafting) ==)
+                items_in_this_pocket = [item for item in self.player.inventory.stored_items if item.type == item_type_key]
+                height += len(set(i.name for i in items_in_this_pocket)) * item_row_h if items_in_this_pocket else empty_line_h # Items or (Empty)
+                height += capacity_line_h # Capacity text
+                height += (TEXT_AREA_LINE_HEIGHT + ITEM_SECTION_SPACING) # Spacing after pocket
+
+        elif display_mode_to_calculate == "loot_decision_display":
+            height += section_title_h # "--- Loot Found! ---"
+            if self.world.pending_loot_item:
+                height += item_row_h # Pending item
+                if self.world.pending_loot_item.description:
+                     desc_lines = textwrap.wrap(f"Desc: {self.world.pending_loot_item.description}", width=int((GAME_AREA_WIDTH - (2 * LEFT_PADDING) - 5) / (TEXT_AREA_FONT_SIZE * 0.6)))
+                     height += len(desc_lines) * TEXT_AREA_LINE_HEIGHT
+            else: 
+                height += empty_line_h
+            height += ITEM_SECTION_SPACING
+
+            height += section_title_h # "--- Your Equipment & Pockets ---"
+            # Equipped Items section
+            height += section_title_h # "== Equipped Items =="
+            num_equipped = 0
+            if self.player.inventory.equipped_items.get('Held'): num_equipped += 1
+            if self.player.inventory.equipped_items.get('Body'): num_equipped += 1
+            num_equipped += len(self.player.inventory.equipped_items.get('Trinkets', []))
+            height += num_equipped * item_row_h if num_equipped > 0 else empty_line_h
+            height += ITEM_SECTION_SPACING
+            # Pockets section
+            for item_type_key, _ in self.player.inventory.carry_capacities.items():
+                height += TEXT_AREA_LINE_HEIGHT + ITEM_ICON_VERTICAL_SPACING / 2 # Pocket title
+                items_in_this_pocket = [item for item in self.player.inventory.stored_items if item.type == item_type_key]
+                height += len(set(i.name for i in items_in_this_pocket)) * item_row_h if items_in_this_pocket else empty_line_h
+                height += capacity_line_h # Capacity text
+                height += (TEXT_AREA_LINE_HEIGHT + ITEM_SECTION_SPACING)
+
+        elif display_mode_to_calculate == "select_item_to_drop_for_loot_display":
+            height += section_title_h # "--- Drop Item to Take ---"
+            if self.world.pending_loot_item:
+                height += item_row_h # Pending item display
+                height += ITEM_ICON_VERTICAL_SPACING * 2 # Extra spacing after pending item
+                
+                pending_item_type = self.world.pending_loot_item.type
+                height += TEXT_AREA_LINE_HEIGHT + ITEM_ICON_VERTICAL_SPACING / 2 # Relevant Pocket title
+                items_in_relevant_pocket = [item for item in self.player.inventory.stored_items if item.type == pending_item_type]
+                height += len(set(i.name for i in items_in_relevant_pocket)) * item_row_h if items_in_relevant_pocket else empty_line_h
+                height += capacity_line_h # Capacity text
+                height += (TEXT_AREA_LINE_HEIGHT + ITEM_SECTION_SPACING)
+            else: # Should not happen, but if no pending item
+                height += TEXT_AREA_LINE_HEIGHT # For error message
+        return height
 
     def _get_item_icon_texture(self, item):
         if not item:
@@ -544,7 +643,7 @@ class GameView(arcade.View):
                 print(f"Error loading icon for {item.name} at {icon_path}: {e}. Using default.")
         return self.default_item_icon_texture
 
-    def _draw_item_section_in_panel(self, title, items_list_or_dict, current_draw_y, text_color, is_dict_of_items=False, make_clickable=False, source_override=None):
+    def _draw_item_section_in_panel(self, title, items_list_or_dict, current_draw_y, text_color, is_dict_of_items=False, make_clickable=False, source_override=None, view_boundaries=None):
         arcade.draw_text(title, LEFT_PADDING, current_draw_y, text_color, font_size=TEXT_AREA_FONT_SIZE + 2, bold=True, anchor_y="top")
         current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_SECTION_SPACING / 2)
         items_with_source_info = [] 
@@ -761,26 +860,42 @@ class GameView(arcade.View):
         elif self.display_mode in ["inventory_management", "view_bags", "select_item_to_equip_display"]:
             _line_font_size = TEXT_AREA_FONT_SIZE 
             _text_color_for_mode = arcade.color.WHITE 
-        self.scrollable_text_rect_on_screen = (
-            description_x,  
-            _scroll_area_top_y_for_lines - _scroll_area_height_for_lines,  
-            description_width,  
-            _scroll_area_height_for_lines  
-        )
-        if self.display_mode in ["welcome_screen", "area_description", "combat_log"]:
+        
+        # This scrollable_text_rect_on_screen should define the *visible* area for scrolling content
+        # For icon views, it's the full panel. For text views, it's the smaller text box.
+        if self.display_mode in inventory_views: # Full panel for icon views (inventory_views defined earlier)
+             self.scrollable_text_rect_on_screen = (
+                LEFT_PADDING,  # left_x
+                0, # bottom_y of the game panel (0 relative to panel, or PLAYER_INFO_BANNER_HEIGHT from screen bottom)
+                GAME_AREA_WIDTH - (2*LEFT_PADDING),  # width
+                SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT # height of the game panel
+            )
+        else: # Smaller box for text logs/descriptions
+            self.scrollable_text_rect_on_screen = (
+                description_x,  
+                _scroll_area_top_y_for_lines - _scroll_area_height_for_lines,  # bottom_y
+                description_width,  # width
+                _scroll_area_height_for_lines  # height
+            )
+
+        # Unified drawing loop for text-based views
+        if self.display_mode in ["welcome_screen", "area_description", "combat_log", 
+                                 "select_item_to_equip_display", "item_details_display"]:
             if self.current_scrollable_lines:
                 first_visible_line_idx = int(self.scroll_offset_y / TEXT_AREA_LINE_HEIGHT)
-                lines_in_view = int(_scroll_area_height_for_lines / TEXT_AREA_LINE_HEIGHT)
+                # Use self.scrollable_text_rect_on_screen[3] (height) for lines_in_view
+                lines_in_view = int(self.scrollable_text_rect_on_screen[3] / TEXT_AREA_LINE_HEIGHT) if self.scrollable_text_rect_on_screen and self.scrollable_text_rect_on_screen[3] > 0 else 0
+                
                 for i in range(len(self.current_scrollable_lines)):
-                    if i < first_visible_line_idx:
-                        continue
-                    if i > first_visible_line_idx + lines_in_view + 1:  
-                        break
                     line_text_content = self.current_scrollable_lines[i]
                     line_y_offset_from_content_top = i * TEXT_AREA_LINE_HEIGHT
                     draw_y_on_screen = _scroll_area_top_y_for_lines - (line_y_offset_from_content_top - self.scroll_offset_y)
-                    if draw_y_on_screen <= _scroll_area_top_y_for_lines and \
-                       draw_y_on_screen >= _scroll_area_top_y_for_lines - _scroll_area_height_for_lines - TEXT_AREA_LINE_HEIGHT:
+                    
+                    # Clipping check: only draw if the line is within the visible scrollable_text_rect_on_screen
+                    # rect[1] is bottom_y, rect[3] is height. So top_y of rect is rect[1] + rect[3]
+                    if self.scrollable_text_rect_on_screen and \
+                       draw_y_on_screen <= self.scrollable_text_rect_on_screen[1] + self.scrollable_text_rect_on_screen[3] and \
+                       draw_y_on_screen - TEXT_AREA_LINE_HEIGHT > self.scrollable_text_rect_on_screen[1] - TEXT_AREA_LINE_HEIGHT : # Check if any part of the line is visible
                         arcade.draw_text(
                             line_text_content,
                             description_x, 
@@ -793,12 +908,13 @@ class GameView(arcade.View):
                         )
         elif self.display_mode == "inventory_management":
             current_draw_y = _scroll_area_top_y_for_lines 
+            current_draw_y -= self.scroll_offset_y # Apply scroll for icon views
             self.inventory_item_clickable_sprites.clear() 
-            current_draw_y = self._draw_item_section_in_panel("== Equipped Items ==", self.player.inventory.equipped_items, current_draw_y, _text_color_for_mode, is_dict_of_items=True, make_clickable=True)
-            current_draw_y = self._draw_item_section_in_panel("== Carried Items (Bags) ==", self.player.inventory.stored_items, current_draw_y, _text_color_for_mode, make_clickable=True)
-            current_draw_y = self._draw_item_section_in_panel("== Strongbox (Camp) ==", self.player.inventory.strongbox_items, current_draw_y, _text_color_for_mode, make_clickable=True)
+            current_draw_y = self._draw_item_section_in_panel("== Equipped Items ==", self.player.inventory.equipped_items, current_draw_y, _text_color_for_mode, is_dict_of_items=True, make_clickable=True, view_boundaries=self.scrollable_text_rect_on_screen)
+            current_draw_y = self._draw_item_section_in_panel("== Carried Items (Bags) ==", self.player.inventory.stored_items, current_draw_y, _text_color_for_mode, make_clickable=True, view_boundaries=self.scrollable_text_rect_on_screen)
+            current_draw_y = self._draw_item_section_in_panel("== Strongbox (Camp) ==", self.player.inventory.strongbox_items, current_draw_y, _text_color_for_mode, make_clickable=True, view_boundaries=self.scrollable_text_rect_on_screen)
         elif self.display_mode == "view_bags":
-            current_draw_y = _scroll_area_top_y_for_lines
+            current_draw_y = _scroll_area_top_y_for_lines - self.scroll_offset_y
             self.inventory_item_clickable_sprites.clear() 
             arcade.draw_text("--- Equipment ---", description_x, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE + 2, bold=True, anchor_y="top")
             current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_SECTION_SPACING / 2)
@@ -902,7 +1018,7 @@ class GameView(arcade.View):
                 arcade.draw_text(capacity_text, description_x + ITEM_TEXT_OFFSET_X, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE -1, anchor_y="top")
                 current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_SECTION_SPACING)
         elif self.display_mode == "select_item_to_drop_for_loot_display":
-            current_draw_y = _scroll_area_top_y_for_lines
+            current_draw_y = _scroll_area_top_y_for_lines - self.scroll_offset_y
             self.inventory_item_clickable_sprites.clear()
             pending_item = self.world.pending_loot_item
             if not pending_item:
@@ -960,18 +1076,7 @@ class GameView(arcade.View):
             current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_SECTION_SPACING)
         elif self.display_mode == "select_item_to_equip_display" or self.display_mode == "item_details_display":
             if self.current_scrollable_lines: 
-                first_visible_line_idx = int(self.scroll_offset_y / TEXT_AREA_LINE_HEIGHT)
-                lines_in_view = int(_scroll_area_height_for_lines / TEXT_AREA_LINE_HEIGHT)
-                for i in range(len(self.current_scrollable_lines)):
-                    if i < first_visible_line_idx: continue
-                    if i > first_visible_line_idx + lines_in_view + 1: break
-                    line_text_content = self.current_scrollable_lines[i]
-                    line_y_offset_from_content_top = i * TEXT_AREA_LINE_HEIGHT
-                    draw_y_on_screen = _scroll_area_top_y_for_lines - (line_y_offset_from_content_top - self.scroll_offset_y)
-                    if draw_y_on_screen <= _scroll_area_top_y_for_lines and \
-                       draw_y_on_screen >= _scroll_area_top_y_for_lines - _scroll_area_height_for_lines - TEXT_AREA_LINE_HEIGHT:
-                        arcade.draw_text(line_text_content, description_x, draw_y_on_screen, _text_color_for_mode,
-                                          font_size=_line_font_size, width=description_width, anchor_x="left", anchor_y="top")
+                pass # Drawing is handled by the unified text-drawing loop above
         if self.right_panel_background_texture:
             arcade.draw_texture_rectangle(
                 RIGHT_MENU_X_START + MENU_PANEL_WIDTH / 2,
@@ -1223,7 +1328,7 @@ class GameView(arcade.View):
             if s_rect_x <= x <= s_rect_x + s_rect_width and \
                s_rect_bottom_y <= y <= s_rect_top_y:
                 self.scroll_offset_y -= scroll_y * TEXT_AREA_LINE_HEIGHT * 2 
-                total_content_height = len(self.current_scrollable_lines) * TEXT_AREA_LINE_HEIGHT
+                total_content_height = self.current_view_content_height
                 max_scroll = max(0, total_content_height - s_rect_height)
                 if total_content_height <= s_rect_height: 
                     self.scroll_offset_y = 0
