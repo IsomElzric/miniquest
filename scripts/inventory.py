@@ -106,7 +106,7 @@ class Inventory():
             self.equipped_items[slot_to_equip] = item_to_equip
             message_log_func(f"Equipped {item_to_equip.name} in {slot_to_equip} slot.")
         elif slot_to_equip == 'Trinkets':
-            MAX_TRINKETS = 2 # Example limit
+            MAX_TRINKETS = 10 # Example limit
             if len(self.equipped_items['Trinkets']) >= MAX_TRINKETS:
                 old_trinket = self.equipped_items['Trinkets'].pop(0) # Remove the oldest
                 self.strongbox_items.append(old_trinket)
