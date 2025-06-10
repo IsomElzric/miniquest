@@ -56,8 +56,8 @@ class Inventory():
             self.owned_items.append(item_to_add) # Keep track of all items ever owned for loot rule purposes
             if message_log_func: # Optional logging
                 message_log_func(f"{item_to_add.name} added to your bag.")
-            # --- DEBUG ---
-            print(f"DEBUG INV: Added '{item_to_add.name}' to owned_items. Current owned_items (names): {[oi.name for oi in self.owned_items]}")
+            # --- REMOVED DEBUG ---
+            # print(f"DEBUG INV: Added '{item_to_add.name}' to owned_items. Current owned_items (names): {[oi.name for oi in self.owned_items]}")
             # --- END DEBUG ---
             return True
         else:

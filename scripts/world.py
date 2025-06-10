@@ -158,7 +158,7 @@ class World():
         Returns a string indicating the desired display mode for GameView.
         """
         self.append_message(f"You chose: {choice_text}") # Log the raw choice
-        print(f"DEBUG WORLD.HPC ENTRY: choice='{choice_text}', in_loot_decision_mode={self.in_loot_decision_mode}, pending_loot_item='{self.pending_loot_item.name if self.pending_loot_item else None}'") # DEBUG
+        # print(f"DEBUG WORLD.HPC ENTRY: choice='{choice_text}', in_loot_decision_mode={self.in_loot_decision_mode}, pending_loot_item='{self.pending_loot_item.name if self.pending_loot_item else None}'") # DEBUG
         logging.debug(f"Handling player choice: '{choice_text}'")
 
         if self.is_player_combat_turn: # Check if we are expecting a combat command
@@ -436,7 +436,7 @@ class World():
         self._end_loot_decision_phase() # Also clear loot state if combat ends abruptly
 
     def _end_loot_decision_phase(self):
-        print(f"DEBUG WORLD._end_loot_decision_phase: Setting in_loot_decision_mode=False, pending_loot_item=None. Was: {self.in_loot_decision_mode}, pending_loot_item='{self.pending_loot_item.name if self.pending_loot_item else None}'") # DEBUG
+        # print(f"DEBUG WORLD._end_loot_decision_phase: Setting in_loot_decision_mode=False, pending_loot_item=None. Was: {self.in_loot_decision_mode}, pending_loot_item='{self.pending_loot_item.name if self.pending_loot_item else None}'") # DEBUG
         self.in_loot_decision_mode = False
         self.pending_loot_item = None
 
