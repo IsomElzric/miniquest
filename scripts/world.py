@@ -158,6 +158,7 @@ class World():
         Returns a string indicating the desired display mode for GameView.
         """
         self.append_message(f"You chose: {choice_text}") # Log the raw choice
+        print(f"DEBUG WORLD.HPC ENTRY: choice='{choice_text}', in_loot_decision_mode={self.in_loot_decision_mode}, pending_loot_item='{self.pending_loot_item.name if self.pending_loot_item else None}'") # DEBUG
         logging.debug(f"Handling player choice: '{choice_text}'")
 
         if self.is_player_combat_turn: # Check if we are expecting a combat command
@@ -197,34 +198,8 @@ class World():
                 # Fallback if the choice_text doesn't match expected commands for loot decision
                 self.append_message(f"Invalid choice during loot decision: {choice_text}")
                 return "show_loot_options" # Stay in loot decision mode
-        elif choice_text == "Drop Item to Take": # New command from loot_decision_menu
-            if self.pending_loot_item:
-                self.append_message(f"You consider dropping an item to make space for the {self.pending_loot_item.name}.")
-                return "select_item_to_drop_for_loot" # New state for GameView
-            return "show_loot_options" # Fallback if no pending loot
-        elif choice_text.startswith("DropForLoot: "):
-            if not self.pending_loot_item:
-                self.append_message("Error: No pending loot item to make space for.")
-                self._end_loot_decision_phase()
-                return "area_description"
+        # "Drop Item to Take" and "DropForLoot" logic removed for this rollback.
 
-            item_name_to_drop = choice_text.split(": ", 1)[1]
-            item_to_drop_obj = None
-            for item in self.player.inventory.stored_items: # Check only carried items
-                if item.name == item_name_to_drop:
-                    item_to_drop_obj = item
-                    break
-            
-            if item_to_drop_obj:
-                if self.player.inventory.drop_item(item_to_drop_obj, "carried", self.append_message):
-                    # Now that space is made, try to add the pending loot item
-                    self.loot.add_item_to_inventory(self.player, self.pending_loot_item, self.append_message)
-            else:
-                self.append_message(f"Could not find {item_name_to_drop} in your carried items to drop.")
-            
-            self._end_loot_decision_phase() # End loot decision regardless of outcome
-            self.display_current_area()
-            return "area_description" # Corrected: After dropping and taking, go back to area
 
         if self.in_travel_selection_mode:
             return self.handle_travel_choice(choice_text)
@@ -263,7 +238,7 @@ class World():
             return "select_item_to_equip_mode"
         elif choice_text == "View Items":
             return "inventory_management"
-        elif choice_text == "View Equipped":
+        elif choice_text == "View Equipped": # This command is not currently used by any button
             return "inventory_management"
         elif choice_text == "Continue": # New command after defeat log is shown
             # This assumes the player is at camp and has seen defeat messages.
@@ -271,6 +246,12 @@ class World():
             self.display_current_area() # Populate log with camp description
             return "area_description"
         elif choice_text.startswith("Equip Index: "):
+            try:
+                index_to_equip = int(choice_text.split(": ")[1])
+                # ... (rest of the Equip Index logic)
+            except (ValueError, IndexError):
+                self.append_message("Error processing equip selection.")
+                return "select_item_to_equip_mode"
             try:
                 index_to_equip = int(choice_text.split(": ")[1])
                 if 0 <= index_to_equip < len(self.available_items_to_equip):
@@ -285,6 +266,11 @@ class World():
             except (ValueError, IndexError):
                 self.append_message("Error processing equip selection.")
                 return "select_item_to_equip_mode"
+        elif choice_text == "Get Up": # Handle the new "Get Up" command after defeat
+            # This assumes the player is at camp and has seen defeat messages.
+            # Now, show the camp's area description.
+            self.display_current_area() # Populate log with camp description
+            return "area_description"
         elif choice_text.startswith("Drop Item: "): # Expecting "Drop Item: Item Name from Source"
             # This is a placeholder for how GameView might send the command.
             # We need to parse item_name and source from choice_text if we go this route,
@@ -450,6 +436,7 @@ class World():
         self._end_loot_decision_phase() # Also clear loot state if combat ends abruptly
 
     def _end_loot_decision_phase(self):
+        print(f"DEBUG WORLD._end_loot_decision_phase: Setting in_loot_decision_mode=False, pending_loot_item=None. Was: {self.in_loot_decision_mode}, pending_loot_item='{self.pending_loot_item.name if self.pending_loot_item else None}'") # DEBUG
         self.in_loot_decision_mode = False
         self.pending_loot_item = None
 

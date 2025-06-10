@@ -9,51 +9,43 @@ class Loot():
         self.all_items = value
 
     def get_drop_by_area(self, player, area):
+        """
+        Determines a loot drop for the player based on the area.
+        Trinkets will only drop if the player does not already own one of the same name.
+        Returns the item object (template for now) or None if no drop.
+        """
         pool = []
-        # print('Building the drop pool')
-        for i, v in enumerate(self.all_items):
-            # print('Checking {} which drops in {} against {}'.format(v.name, v.spawn_location, area))
-            
-            if area in v.spawn_location or 'global' in v.spawn_location[0]:
-                # print('{} drops in {}, adding to drop pool\n'.format(v.name, area))
-                pool.append(v)
-        
-        # if pool:
-            # print('\nDrop pool built\n')
-        # else:
-            # print('\nDrop pool failed to build\n')
+        # Build the initial drop pool based on area spawn locations
+        for item_template in self.all_items:
+            if area in item_template.spawn_location or ('global' in item_template.spawn_location and len(item_template.spawn_location) == 1): # Check for explicit 'global'
+                pool.append(item_template)
 
-        drop = self.all_items[0]
-        searching = True
-        while searching:
-            # print('Rolling on drop pool')
-            checked = pool
-            choice = random.choice(pool)
-            # print('Chose {} from drop pool'.format(choice.name))
-            # print('Checking type {} against type rules'.format(choice.type))
+        # Filter the pool: remove trinkets the player already owns (by name)
+        # Keep other item types (weapon, armor, crafting, wealth) as duplicates are allowed
+        filtered_pool = []
+        owned_trinket_names = {item.name for item in player.inventory.owned_items if item.type == 'trinket'}
 
-            if choice.type == 'trinket':
-                # print('Choice follows trinket rules')
-                if choice not in player.inventory.owned_items:
-                    # print('Player does not already own {}'.format(choice.name))
-                    drop = choice
-                    break
-                else:
-                    # Player already owns this trinket, remove from current consideration
-                    # print(f'Player already owns trinket {choice.name}, removing from checked pool for this roll.')
-                    checked.remove(choice)
-            elif choice.type in ['weapon', 'armor', 'crafting', 'wealth']:
-                # Weapons, armor, crafting, and wealth items can drop multiple times.
-                # No uniqueness check against owned_items for these types.
-                # print('Choice follows crafting and wealth rules')
-                drop = choice
-                break
-            
-            if not checked:
-                # print('Pool exhausted and drop rules could not be satisfied\nUsing full item list!')
-                pool = self.all_items
+        for item_candidate in pool:
+            if item_candidate.type == 'trinket':
+                if item_candidate.name not in owned_trinket_names:
+                    filtered_pool.append(item_candidate)
+            else:
+                # Always add non-trinkets to the filtered pool
+                filtered_pool.append(item_candidate)
 
-        return drop
+        # Now, select a random item from the filtered pool
+        if filtered_pool:
+            # NOTE: Returning the item template object directly for now.
+            # A more robust solution would clone the item here.
+            # For now, returning the template object is sufficient to test the uniqueness logic.
+            drop = random.choice(filtered_pool)
+            return drop # Return the selected item template
+        else:
+            # If the filtered pool is empty, it means all potential drops were trinkets the player already owned.
+            # In this case, there is no drop.
+            # print("DEBUG: Filtered drop pool is empty. No item dropped.")
+            return None # No drop
+
 
     def roll_type(self):
         pass

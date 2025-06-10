@@ -392,15 +392,14 @@ class GameView(arcade.View):
                 # Offer to take if player can carry it
                 if self.world.player.inventory.can_carry_item(self.world.pending_loot_item):
                     options_text.insert(0, f"Take {item_name}") # Take option first
-                else:
-                    # If cannot carry, offer to drop an item to make space
-                    options_text.insert(0, "Drop Item to Take")
+                # "Drop item to make space" was removed for this rollback
             self.current_menu_options = options_text
         # elif menu_type == "player_defeated_flee_only": # This menu type is replaced
             # options_text = ["Flee Battle"] 
             # self.current_menu_options = options_text
-        elif menu_type == "inventory_management": # New menu for inventory
-            options_text = ["Equip Item", "View Items", "View Equipped", "Back"] # Added "Equip Item"
+        elif menu_type == "inventory_management": # Menu for the "Prepare" / Inventory view
+            # Removed redundant buttons as item icons are now clickable for actions
+            options_text = ["Back"] 
             self.current_menu_options = options_text
         elif menu_type == "view_bags_menu": # Menu for when viewing bags
             options_text = ["Back"]
@@ -422,17 +421,12 @@ class GameView(arcade.View):
             # Add "Drop Item" button if an item is selected and it's not an equipped item (for now)
             if self.selected_inventory_item and self.selected_item_source and \
                not self.selected_item_source.startswith("equipped_"):
-                options_text.append("Drop Item")
-            if self.selected_inventory_item and self.selected_item_source not in ["equipped_held", "equipped_body", "equipped_trinkets"]:
-                options_text.append("Drop Item")
+                options_text.append("Drop Item") # This condition is sufficient
             options_text.append("Back to Inventory")
 
             self.current_menu_options = options_text
         
         # Create button sprites
-        elif menu_type == "select_item_to_drop_for_loot_menu":
-            options_text = ["Cancel Drop"]
-            self.current_menu_options = options_text
         # Calculate the Y position for the top of the menu content area (below player banner)
         menu_content_area_top_y = SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT
         # Y position for the "Actions" title (anchored top)
@@ -510,7 +504,7 @@ class GameView(arcade.View):
         consistent_text_area_width = GAME_AREA_WIDTH - (2 * LEFT_PADDING) - 5 # Buffer of 5 pixels
 
         if self.display_mode == "area_description":
-            self._prepare_scrollable_text(self.world.current_area.description, TEXT_AREA_FONT_SIZE, consistent_text_area_width)
+            self._prepare_scrollable_text("\n".join(self.log_messages_to_display), TEXT_AREA_FONT_SIZE, consistent_text_area_width)
         elif self.display_mode == "combat_log":
             self._prepare_scrollable_text("\n".join(self.log_messages_to_display), LOG_AREA_FONT_SIZE, consistent_text_area_width)
         # For icon-based views, text preparation is minimal or handled directly in on_draw
@@ -536,11 +530,6 @@ class GameView(arcade.View):
                 # For loot decision, on_draw handles the primary display.
                 # We might add a title here if needed, but for now, it's icon-focused.
                 pass
-            # Pass for other icon-based views where on_draw handles content.
-        elif self.display_mode == "select_item_to_drop_for_loot_display":
-            self.current_scrollable_lines.clear() # Icon-based display
-            self.scroll_offset_y = 0.0
-            pass # on_draw will handle the display
 
     def on_show_view(self):
         arcade.set_background_color(arcade.color.GRAY)
@@ -911,45 +900,6 @@ class GameView(arcade.View):
                     icon_texture = self._get_item_icon_texture(item)
                     if icon_texture:
                         arcade.draw_texture_rectangle(description_x + ITEM_ICON_DRAW_SIZE[0] / 2, current_draw_y - ITEM_ICON_DRAW_SIZE[1] / 2, ITEM_ICON_DRAW_SIZE[0], ITEM_ICON_DRAW_SIZE[1], icon_texture)
-                    arcade.draw_text(f"{item.name} ({item.type})", description_x + ITEM_TEXT_OFFSET_X, current_draw_y - (ITEM_ICON_DRAW_SIZE[1] / 2) + (TEXT_AREA_LINE_HEIGHT / 2) - 4, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
-                    current_draw_y -= (max(ITEM_ICON_DRAW_SIZE[1], TEXT_AREA_LINE_HEIGHT) + ITEM_ICON_VERTICAL_SPACING)
-
-        elif self.display_mode == "select_item_to_drop_for_loot_display":
-            current_draw_y = _scroll_area_top_y_for_lines
-            self.inventory_item_clickable_sprites.clear() # These will be made clickable
-
-            arcade.draw_text("--- Drop Item to Take ---", description_x, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE + 2, bold=True, anchor_y="top")
-            current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_SECTION_SPACING / 2)
-
-            pending_item = self.world.pending_loot_item
-            if pending_item:
-                arcade.draw_text(f"New Item: {pending_item.name} ({pending_item.type})", description_x + ITEM_TEXT_OFFSET_X, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
-                icon_texture = self._get_item_icon_texture(pending_item)
-                if icon_texture:
-                    arcade.draw_texture_rectangle(description_x + ITEM_ICON_DRAW_SIZE[0] / 2, current_draw_y - ITEM_ICON_DRAW_SIZE[1] / 2, ITEM_ICON_DRAW_SIZE[0], ITEM_ICON_DRAW_SIZE[1], icon_texture)
-                current_draw_y -= (max(ITEM_ICON_DRAW_SIZE[1], TEXT_AREA_LINE_HEIGHT) + ITEM_ICON_VERTICAL_SPACING * 2) # Extra spacing
-
-            arcade.draw_text("--- Click a Carried Item to Drop ---", description_x, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE + 2, bold=True, anchor_y="top")
-            current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_SECTION_SPACING / 2)
-
-            if not self.player.inventory.stored_items:
-                arcade.draw_text("(Bags are empty - cannot drop)", description_x + ITEM_TEXT_OFFSET_X, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
-            else:
-                for item_obj in self.player.inventory.stored_items: # Iterate through actual item objects
-                    icon_texture = self._get_item_icon_texture(item_obj) # Use item_obj here
-                    # Create clickable sprite for this item
-                    clickable_sprite = arcade.SpriteSolidColor(ITEM_ICON_DRAW_SIZE[0], ITEM_ICON_DRAW_SIZE[1], (0,0,0,0)) # Invisible
-                    clickable_sprite.center_x = description_x + ITEM_ICON_DRAW_SIZE[0] / 2
-                    clickable_sprite.center_y = current_draw_y - ITEM_ICON_DRAW_SIZE[1] / 2
-                    clickable_sprite.properties['item_object'] = item_obj # Store the actual item object
-                    clickable_sprite.properties['item_source'] = "carried_for_loot_drop" # Specific source
-                    self.inventory_item_clickable_sprites.append(clickable_sprite)
-
-                    if icon_texture:
-                        arcade.draw_texture_rectangle(description_x + ITEM_ICON_DRAW_SIZE[0] / 2, current_draw_y - ITEM_ICON_DRAW_SIZE[1] / 2, ITEM_ICON_DRAW_SIZE[0], ITEM_ICON_DRAW_SIZE[1], icon_texture)
-                    
-                    # Create clickable sprite for this item (logic will be added in next step)
-                    arcade.draw_text(f"{item_obj.name} ({item_obj.type})", description_x + ITEM_TEXT_OFFSET_X, current_draw_y - (ITEM_ICON_DRAW_SIZE[1] / 2) + (TEXT_AREA_LINE_HEIGHT / 2) - 4, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top") # Use item_obj here
                     current_draw_y -= (max(ITEM_ICON_DRAW_SIZE[1], TEXT_AREA_LINE_HEIGHT) + ITEM_ICON_VERTICAL_SPACING)
 
         elif self.display_mode == "view_bags" or self.display_mode == "select_item_to_equip_display" or self.display_mode == "item_details_display":
@@ -1083,13 +1033,6 @@ class GameView(arcade.View):
                     self._prepare_scrollable_text_for_current_mode()
                     return # Handled locally
 
-                elif command == "Cancel Drop" and self.active_menu_type == "select_item_to_drop_for_loot_menu":
-                    # Go back to the initial loot decision screen
-                    self.display_mode = "loot_decision_display"
-                    self.update_menu_options("loot_decision_menu")
-                    self.log_messages_to_display.clear() # Messages are implicit in the view
-                    self._prepare_scrollable_text_for_current_mode()
-                    return # Handled locally
 
                 elif command == "Equip" and self.active_menu_type == "item_details_menu":
                     if self.selected_inventory_item and self.selected_item_source:
@@ -1137,25 +1080,6 @@ class GameView(arcade.View):
                     self.update_menu_options("view_bags_menu")
                     
                     self.log_messages_to_display.clear()
-                    self._prepare_scrollable_text_for_current_mode()
-                    return # Handled locally
-                
-                # Explicit handler for "Drop Item to Take" from loot_decision_menu
-                elif command == "Drop Item to Take":
-                    next_game_state = self.world.handle_player_choice(command)
-                    print(f"DEBUG: World returned '{next_game_state}' for 'Drop Item to Take'") # Crucial Debug Print
-                    self.log_messages_to_display.clear()
-                    self.log_messages_to_display.extend(self.world.get_messages())
-                    
-                    if next_game_state == "select_item_to_drop_for_loot":
-                        self.display_mode = "select_item_to_drop_for_loot_display"
-                        self.update_menu_options("select_item_to_drop_for_loot_menu")
-                    else:
-                        # Fallback: if world doesn't return expected, stay in loot decision
-                        print(f"Warning: Unexpected state '{next_game_state}' from world for 'Drop Item to Take'. Staying in loot decision.")
-                        self.display_mode = "loot_decision_display"
-                        self.update_menu_options("loot_decision_menu")
-                    
                     self._prepare_scrollable_text_for_current_mode()
                     return # Handled this specific command
 
@@ -1224,10 +1148,6 @@ class GameView(arcade.View):
                 elif next_game_state == "select_item_to_equip_mode": # World wants us to show item selection
                     self.display_mode = "select_item_to_equip_display"
                     self.update_menu_options("select_item_to_equip_menu")
-                elif next_game_state == "select_item_to_drop_for_loot": # New state from World
-                    self.display_mode = "select_item_to_drop_for_loot_display"
-                    self.update_menu_options("select_item_to_drop_for_loot_menu")
-                    # Log messages are already added by world
                     # Log messages (like "Select an item...") are already added by world
                 elif next_game_state == "area_description": # Combat ended, or general action
                     self.display_mode = "area_description"
@@ -1255,29 +1175,6 @@ class GameView(arcade.View):
                         self.log_messages_to_display.clear() # Clear previous log/description
                         self._prepare_scrollable_text_for_current_mode() # Prepare item details text
                         return # Handled click on item icon
-            elif self.display_mode == "select_item_to_drop_for_loot_display":
-                clicked_item_sprites = arcade.get_sprites_at_point((x,y), self.inventory_item_clickable_sprites)
-                if clicked_item_sprites:
-                    clicked_item_sprite = clicked_item_sprites[0]
-                    item_to_drop = clicked_item_sprite.properties.get('item_object')
-                    
-                    if item_to_drop:
-                        print(f"Player chose to drop: {item_to_drop.name} to make space for loot.")
-                        # Send command to world to drop this item and then take the pending loot
-                        self.log_messages_to_display.clear()
-                        next_game_state = self.world.handle_player_choice(f"DropForLoot: {item_to_drop.name}")
-                        self.log_messages_to_display.extend(self.world.get_messages())
-                        
-                        # Set display mode and menu based on what the world returns
-                        if next_game_state == "area_description":
-                            self.display_mode = "area_description"
-                            self.update_menu_options("main")
-                        else:
-                            # Fallback or handle other potential states if world logic changes
-                            self.display_mode = next_game_state 
-                            self.update_menu_options("main") # Default to main or derive from state
-                        self._prepare_scrollable_text_for_current_mode()
-                        return
             # If not an icon click, then clicks outside the right-hand menu do nothing.
 
     def on_update(self, delta_time: float):
