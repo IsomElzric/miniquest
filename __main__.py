@@ -99,7 +99,7 @@ class MenuView(arcade.View):
         try:
             self.menu_button_texture = arcade.load_texture(MENU_BUTTON_IMAGE_PATH)
         except FileNotFoundError:
-            print(f"ERROR: Menu button image not found at {MENU_BUTTON_IMAGE_PATH} for MenuView")
+            print(f"ERROR: Menu button image not found at {MENU_BUTTON_IMAGE_PATH}")
         
         # Load right panel background for MenuView
         self.right_panel_background_texture = None
@@ -282,7 +282,7 @@ class GameView(arcade.View):
         # because the world needs to initialize its state before options are reliable.
 
         # Display mode for the main game area
-        self.display_mode = "area_description" # Can be "area_description", "combat_log", "inventory", etc.
+        self.display_mode = "welcome_screen" # Start with a welcome screen
         self.log_messages_to_display = [] # List to hold messages retrieved from world.message_log
 
         # For scrollable text
@@ -397,6 +397,9 @@ class GameView(arcade.View):
         # elif menu_type == "player_defeated_flee_only": # This menu type is replaced
             # options_text = ["Flee Battle"] 
             # self.current_menu_options = options_text
+        elif menu_type == "welcome_menu": # Menu for the initial welcome screen
+            options_text = ["Begin Game"]
+            self.current_menu_options = options_text
         elif menu_type == "inventory_management": # Menu for the "Prepare" / Inventory view
             # Removed redundant buttons as item icons are now clickable for actions
             options_text = ["Back"] 
@@ -503,7 +506,9 @@ class GameView(arcade.View):
         # This must match the 'description_width' used in on_draw's rendering logic
         consistent_text_area_width = GAME_AREA_WIDTH - (2 * LEFT_PADDING) - 5 # Buffer of 5 pixels
 
-        if self.display_mode == "area_description":
+        if self.display_mode == "welcome_screen":
+            self._prepare_scrollable_text("\n".join(self.log_messages_to_display), TEXT_AREA_FONT_SIZE, consistent_text_area_width)
+        elif self.display_mode == "area_description":
             self._prepare_scrollable_text("\n".join(self.log_messages_to_display), TEXT_AREA_FONT_SIZE, consistent_text_area_width)
         elif self.display_mode == "combat_log":
             self._prepare_scrollable_text("\n".join(self.log_messages_to_display), LOG_AREA_FONT_SIZE, consistent_text_area_width)
@@ -534,7 +539,7 @@ class GameView(arcade.View):
     def on_show_view(self):
         arcade.set_background_color(arcade.color.GRAY)
         # When GameView is shown, update options and load initial messages
-        self.update_menu_options("main") # Set initial main menu options
+        self.update_menu_options("welcome_menu") # Start with the welcome menu
         self.log_messages_to_display = self.world.get_messages() # Get welcome and character creation messages
         self._prepare_scrollable_text_for_current_mode() # Prepare initial text
 
@@ -707,7 +712,9 @@ class GameView(arcade.View):
         _line_font_size = TEXT_AREA_FONT_SIZE
         _text_color_for_mode = arcade.color.LIGHT_GRAY # Default color for text
 
-        if self.display_mode == "area_description":
+        if self.display_mode == "welcome_screen":
+            _text_color_for_mode = arcade.color.WHITE # Welcome messages can be brighter
+        elif self.display_mode == "area_description":
             # --- Location Name ---
             location_name_text = f"Location: {self.world.current_area.name}"
             name_font_size = 14 # Stays as is, not part of scrollable TEXT_AREA_FONT_SIZE
@@ -751,7 +758,7 @@ class GameView(arcade.View):
         )
 
         # --- Draw content based on display_mode ---
-        if self.display_mode in ["area_description", "combat_log"]:
+        if self.display_mode in ["welcome_screen", "area_description", "combat_log"]:
             # --- Common Scrollable Text Drawing Logic ---
             if self.current_scrollable_lines:
                 first_visible_line_idx = int(self.scroll_offset_y / TEXT_AREA_LINE_HEIGHT)
@@ -800,7 +807,7 @@ class GameView(arcade.View):
                         elif item_obj:
                             items_with_source_info.append({'item': item_obj, 'source': f'equipped_{slot.lower()}'})
                 elif is_list_of_dicts: # For available_items_to_equip
-                     for item_info in items_list_or_dict:
+                     for item_info in items_list_or_dict: # Corrected variable name here
                          items_with_source_info.append({'item': item_info['item'], 'source': item_info.get('source', 'unknown')})
                 else: # For stored_items, strongbox_items (lists of item objects)
                     current_source_name = "unknown"
@@ -900,6 +907,7 @@ class GameView(arcade.View):
                     icon_texture = self._get_item_icon_texture(item)
                     if icon_texture:
                         arcade.draw_texture_rectangle(description_x + ITEM_ICON_DRAW_SIZE[0] / 2, current_draw_y - ITEM_ICON_DRAW_SIZE[1] / 2, ITEM_ICON_DRAW_SIZE[0], ITEM_ICON_DRAW_SIZE[1], icon_texture)
+                    arcade.draw_text(f"{item.name} ({item.type})", description_x + ITEM_TEXT_OFFSET_X, current_draw_y - (ITEM_ICON_DRAW_SIZE[1] / 2) + (TEXT_AREA_LINE_HEIGHT / 2) - 4, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
                     current_draw_y -= (max(ITEM_ICON_DRAW_SIZE[1], TEXT_AREA_LINE_HEIGHT) + ITEM_ICON_VERTICAL_SPACING)
 
         elif self.display_mode == "view_bags" or self.display_mode == "select_item_to_equip_display" or self.display_mode == "item_details_display":
@@ -1003,6 +1011,21 @@ class GameView(arcade.View):
                 print(f"Clicked button: '{command}'")
 
                 # --- Handle locally managed view changes first ---
+                if command == "Begin Game" and self.active_menu_type == "welcome_menu":
+                    # Clear GameView's local log (which held welcome messages)
+                    self.log_messages_to_display.clear()
+                    
+                    # Tell the world to log its current area description
+                    self.world.display_current_area() 
+                    
+                    # Fetch these new messages (which should now primarily be the area description)
+                    self.log_messages_to_display.extend(self.world.get_messages()) 
+
+                    # Transition to the main game view
+                    self.display_mode = "area_description"
+                    self.update_menu_options("main")
+                    self._prepare_scrollable_text_for_current_mode()
+                    return # Handled this specific command
                 if command == "Back" and self.display_mode == "inventory_management":
                     self.display_mode = "area_description"
                     self.update_menu_options("main")
@@ -1082,17 +1105,6 @@ class GameView(arcade.View):
                     self.log_messages_to_display.clear()
                     self._prepare_scrollable_text_for_current_mode()
                     return # Handled this specific command
-
-                elif command == "Back" and self.active_menu_type == "view_bags_menu": # Specifically "Back" from bags view
-                    self.pre_bags_view_mode = self.display_mode
-                    self.pre_bags_menu_type = self.active_menu_type # Use stored active_menu_type
-                    
-                    self.display_mode = "view_bags"
-                    self.update_menu_options("view_bags_menu")
-                    
-                    self.log_messages_to_display.clear()
-                    self._prepare_scrollable_text_for_current_mode()
-                    return # Handled locally
 
                 elif command == "Back" and self.active_menu_type == "view_bags_menu": # Specifically "Back" from bags view
                     self.display_mode = self.pre_bags_view_mode if self.pre_bags_view_mode else "area_description"
