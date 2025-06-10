@@ -921,7 +921,7 @@ class GameView(arcade.View):
 
         elif self.display_mode == "view_bags":
             current_draw_y = _scroll_area_top_y_for_lines
-            self.inventory_item_clickable_sprites.clear() # Not clickable in "view_bags"
+            self.inventory_item_clickable_sprites.clear() # Items are not clickable in this initial view
 
             arcade.draw_text("--- Equipment ---", description_x, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE + 2, bold=True, anchor_y="top")
             current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_SECTION_SPACING / 2)
@@ -984,13 +984,13 @@ class GameView(arcade.View):
 
             pending_item = self.world.pending_loot_item
             if pending_item:
+                # Draw the pending loot item
                 icon_texture = self._get_item_icon_texture(pending_item)
                 if icon_texture:
                     arcade.draw_texture_rectangle(description_x + ITEM_ICON_DRAW_SIZE[0] / 2,
                                                   current_draw_y - ITEM_ICON_DRAW_SIZE[1] / 2,
                                                   ITEM_ICON_DRAW_SIZE[0], ITEM_ICON_DRAW_SIZE[1],
                                                   icon_texture)
-                
                 item_display_name = f"{pending_item.name} ({pending_item.type})"
                 text_draw_y = current_draw_y - (ITEM_ICON_DRAW_SIZE[1] / 2) + (TEXT_AREA_LINE_HEIGHT / 2) - 4
                 arcade.draw_text(item_display_name, description_x + ITEM_TEXT_OFFSET_X, text_draw_y,
@@ -1004,57 +1004,126 @@ class GameView(arcade.View):
                         current_draw_y -= TEXT_AREA_LINE_HEIGHT
             current_draw_y -= ITEM_SECTION_SPACING
 
-            arcade.draw_text("--- Your Carried Items ---", description_x, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE + 2, bold=True, anchor_y="top")
+            # Now draw player's equipment and pockets, similar to "view_bags"
+            arcade.draw_text("--- Your Equipment & Pockets ---", description_x, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE + 2, bold=True, anchor_y="top")
             current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_SECTION_SPACING / 2)
 
-            if not self.player.inventory.stored_items:
-                arcade.draw_text("(Bags are empty)", description_x + ITEM_TEXT_OFFSET_X, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
-            else:
-                # Simplified display of carried items (icons and names)
-                for item in self.player.inventory.stored_items:
-                    icon_texture = self._get_item_icon_texture(item)
-                    if icon_texture:
-                        arcade.draw_texture_rectangle(description_x + ITEM_ICON_DRAW_SIZE[0] / 2, current_draw_y - ITEM_ICON_DRAW_SIZE[1] / 2, ITEM_ICON_DRAW_SIZE[0], ITEM_ICON_DRAW_SIZE[1], icon_texture)
-                    arcade.draw_text(f"{item.name} ({item.type})", description_x + ITEM_TEXT_OFFSET_X, current_draw_y - (ITEM_ICON_DRAW_SIZE[1] / 2) + (TEXT_AREA_LINE_HEIGHT / 2) - 4, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
-                    current_draw_y -= (max(ITEM_ICON_DRAW_SIZE[1], TEXT_AREA_LINE_HEIGHT) + ITEM_ICON_VERTICAL_SPACING)
+            current_draw_y = self._draw_item_section_in_panel("== Equipped Items ==", self.player.inventory.equipped_items, current_draw_y, _text_color_for_mode, is_dict_of_items=True, make_clickable=False)
+            pocket_names_map = {
+                'crafting': "Main Bag (Crafting)",
+                'trinket': "Front Pouch (Trinkets)",
+                'weapon': "Tied On the Side (Weapons)",
+                'wealth': "Side Pouch (Wealth)",
+                'armor': "Strapped Below (Armor)"
+            }
+            for item_type_key, max_capacity in self.player.inventory.carry_capacities.items():
+                pocket_display_name = pocket_names_map.get(item_type_key, f"{item_type_key.capitalize()} Pocket")
+                arcade.draw_text(f"== {pocket_display_name} ==", description_x, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE + 1, bold=True, anchor_y="top")
+                current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_ICON_VERTICAL_SPACING / 2)
+                items_in_this_pocket = [item for item in self.player.inventory.stored_items if item.type == item_type_key]
+                
+                # Store current_draw_y before drawing items in this pocket to correctly position capacity text
+                pocket_items_start_y = current_draw_y 
+                
+                if not items_in_this_pocket:
+                    arcade.draw_text("(Empty)", description_x + ITEM_TEXT_OFFSET_X, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
+                    current_draw_y -= TEXT_AREA_LINE_HEIGHT
+                else:
+                    # Use a temporary y_offset for drawing items within this pocket section
+                    # This avoids _draw_item_section_in_panel modifying the main current_draw_y prematurely
+                    # For this informational, non-clickable view, we can draw directly:
+                    temp_y = current_draw_y
+                    item_name_counts = Counter(item.name for item in items_in_this_pocket)
+                    processed_item_names = set()
+                    for item_obj in items_in_this_pocket:
+                        if item_obj.name not in processed_item_names:
+                            icon_texture = self._get_item_icon_texture(item_obj)
+                            if icon_texture:
+                                arcade.draw_texture_rectangle(description_x + ITEM_ICON_DRAW_SIZE[0] / 2, temp_y - ITEM_ICON_DRAW_SIZE[1] / 2, ITEM_ICON_DRAW_SIZE[0], ITEM_ICON_DRAW_SIZE[1], icon_texture)
+                            display_name = f"{item_obj.name} ({item_obj.type})"
+                            count = item_name_counts[item_obj.name]
+                            if count > 1: display_name += f" x{count}"
+                            arcade.draw_text(display_name, description_x + ITEM_TEXT_OFFSET_X, temp_y - (ITEM_ICON_DRAW_SIZE[1] / 2) + (TEXT_AREA_LINE_HEIGHT / 2) - 4, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
+                            temp_y -= (max(ITEM_ICON_DRAW_SIZE[1], TEXT_AREA_LINE_HEIGHT) + ITEM_ICON_VERTICAL_SPACING)
+                            processed_item_names.add(item_obj.name)
+                    current_draw_y = temp_y # Update current_draw_y to after the last item in this pocket
+
+                capacity_text = f"Capacity: {len(items_in_this_pocket)} / {max_capacity}"
+                arcade.draw_text(capacity_text, description_x + ITEM_TEXT_OFFSET_X, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE -1, anchor_y="top")
+                current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_SECTION_SPACING)
 
         elif self.display_mode == "select_item_to_drop_for_loot_display":
             current_draw_y = _scroll_area_top_y_for_lines
-            self.inventory_item_clickable_sprites.clear() # Clickable sprites will be added in the next step
+            self.inventory_item_clickable_sprites.clear()
+
+            pending_item = self.world.pending_loot_item
+            if not pending_item:
+                # This case should ideally not be reached if state transitions are correct,
+                # but this guard prevents a crash.
+                arcade.draw_text("Error: Loot decision cannot be processed (no item).",
+                                 description_x, current_draw_y, arcade.color.RED,
+                                 font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
+                # Consider logging this unexpected state or forcing a transition back.
+                return # Stop further drawing for this mode if no pending_item
 
             arcade.draw_text("--- Drop Item to Take ---", description_x, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE + 2, bold=True, anchor_y="top")
             current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_SECTION_SPACING / 2)
-
-            pending_item = self.world.pending_loot_item
+            
             if pending_item:
                 arcade.draw_text(f"New Item: {pending_item.name} ({pending_item.type})", description_x + ITEM_TEXT_OFFSET_X, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
                 icon_texture = self._get_item_icon_texture(pending_item)
                 if icon_texture:
                     arcade.draw_texture_rectangle(description_x + ITEM_ICON_DRAW_SIZE[0] / 2, current_draw_y - ITEM_ICON_DRAW_SIZE[1] / 2, ITEM_ICON_DRAW_SIZE[0], ITEM_ICON_DRAW_SIZE[1], icon_texture)
-                current_draw_y -= (max(ITEM_ICON_DRAW_SIZE[1], TEXT_AREA_LINE_HEIGHT) + ITEM_ICON_VERTICAL_SPACING * 2) # Extra spacing
+            current_draw_y -= (max(ITEM_ICON_DRAW_SIZE[1], TEXT_AREA_LINE_HEIGHT) + ITEM_ICON_VERTICAL_SPACING * 2)
 
-            arcade.draw_text("--- Your Carried Items ---", description_x, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE + 2, bold=True, anchor_y="top")
-            current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_SECTION_SPACING / 2)
+            # --- Display only the relevant pocket for the pending item's type ---
+            pending_item_type = pending_item.type
+            pocket_names_map = {
+                'crafting': "Main Bag (Crafting)",
+                'trinket': "Front Pouch (Trinkets)",
+                'weapon': "Tied On the Side (Weapons)",
+                'wealth': "Side Pouch (Wealth)",
+                'armor': "Strapped Below (Armor)"
+            }
+            relevant_pocket_name = pocket_names_map.get(pending_item_type, f"{pending_item_type.capitalize()} Pocket")
+            max_capacity = self.player.inventory.carry_capacities.get(pending_item_type, 0)
 
-            if not self.player.inventory.stored_items:
-                arcade.draw_text("(Bags are empty - cannot drop)", description_x + ITEM_TEXT_OFFSET_X, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
+            arcade.draw_text(f"--- Click Item to Drop from {relevant_pocket_name} ---", description_x, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE + 1, bold=True, anchor_y="top")
+            current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_ICON_VERTICAL_SPACING / 2)
+
+            items_in_relevant_pocket = [item for item in self.player.inventory.stored_items if item.type == pending_item_type]
+
+            if not items_in_relevant_pocket:
+                arcade.draw_text(f"({relevant_pocket_name} is empty)", description_x + ITEM_TEXT_OFFSET_X, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
+                current_draw_y -= TEXT_AREA_LINE_HEIGHT
             else:
-                # Display carried items (icons and names) - not yet clickable
-                for item_obj in self.player.inventory.stored_items: # Iterate through actual item objects
-                    icon_texture = self._get_item_icon_texture(item_obj)
-                    
-                    # Create a clickable sprite for this item
-                    clickable_sprite = arcade.SpriteSolidColor(ITEM_ICON_DRAW_SIZE[0], ITEM_ICON_DRAW_SIZE[1], (0,0,0,0)) # Invisible
-                    clickable_sprite.center_x = description_x + ITEM_ICON_DRAW_SIZE[0] / 2
-                    clickable_sprite.center_y = current_draw_y - ITEM_ICON_DRAW_SIZE[1] / 2
-                    clickable_sprite.properties['item_object'] = item_obj # Store the actual item object
-                    clickable_sprite.properties['item_source'] = "carried_for_loot_drop" # Specific source for this context
-                    self.inventory_item_clickable_sprites.append(clickable_sprite)
+                item_name_counts = Counter(item.name for item in items_in_relevant_pocket)
+                processed_item_names = set()
+                for item_obj in items_in_relevant_pocket:
+                    if item_obj.name not in processed_item_names:
+                        icon_texture = self._get_item_icon_texture(item_obj)
+                        # Create clickable sprite for this item
+                        clickable_sprite = arcade.SpriteSolidColor(ITEM_ICON_DRAW_SIZE[0], ITEM_ICON_DRAW_SIZE[1], (0,0,0,0)) # Invisible
+                        clickable_sprite.center_x = description_x + ITEM_ICON_DRAW_SIZE[0] / 2
+                        clickable_sprite.center_y = current_draw_y - ITEM_ICON_DRAW_SIZE[1] / 2
+                        clickable_sprite.properties['item_object'] = item_obj
+                        clickable_sprite.properties['item_source'] = "carried_for_loot_drop"
+                        self.inventory_item_clickable_sprites.append(clickable_sprite)
 
-                    if icon_texture:
-                        arcade.draw_texture_rectangle(description_x + ITEM_ICON_DRAW_SIZE[0] / 2, current_draw_y - ITEM_ICON_DRAW_SIZE[1] / 2, ITEM_ICON_DRAW_SIZE[0], ITEM_ICON_DRAW_SIZE[1], icon_texture)
-                    arcade.draw_text(f"{item_obj.name} ({item_obj.type})", description_x + ITEM_TEXT_OFFSET_X, current_draw_y - (ITEM_ICON_DRAW_SIZE[1] / 2) + (TEXT_AREA_LINE_HEIGHT / 2) - 4, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
-                    current_draw_y -= (max(ITEM_ICON_DRAW_SIZE[1], TEXT_AREA_LINE_HEIGHT) + ITEM_ICON_VERTICAL_SPACING)
+                        if icon_texture:
+                            arcade.draw_texture_rectangle(description_x + ITEM_ICON_DRAW_SIZE[0] / 2, current_draw_y - ITEM_ICON_DRAW_SIZE[1] / 2, ITEM_ICON_DRAW_SIZE[0], ITEM_ICON_DRAW_SIZE[1], icon_texture)
+                        
+                        display_name = f"{item_obj.name} ({item_obj.type})"
+                        count = item_name_counts[item_obj.name]
+                        if count > 1:
+                            display_name += f" x{count}"
+                        arcade.draw_text(display_name, description_x + ITEM_TEXT_OFFSET_X, current_draw_y - (ITEM_ICON_DRAW_SIZE[1] / 2) + (TEXT_AREA_LINE_HEIGHT / 2) - 4, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top")
+                        current_draw_y -= (max(ITEM_ICON_DRAW_SIZE[1], TEXT_AREA_LINE_HEIGHT) + ITEM_ICON_VERTICAL_SPACING)
+                        processed_item_names.add(item_obj.name)
+            
+            capacity_text = f"Capacity: {len(items_in_relevant_pocket)} / {max_capacity}"
+            arcade.draw_text(capacity_text, description_x + ITEM_TEXT_OFFSET_X, current_draw_y, _text_color_for_mode, font_size=TEXT_AREA_FONT_SIZE -1, anchor_y="top")
+            current_draw_y -= (TEXT_AREA_LINE_HEIGHT + ITEM_SECTION_SPACING)
 
         # Adjusted this condition to avoid re-processing "view_bags"
         elif self.display_mode == "select_item_to_equip_display" or self.display_mode == "item_details_display":
