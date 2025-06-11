@@ -29,7 +29,7 @@ BUTTON_FONT_SIZE = 18
 
 # --- Game View Constants ---
 PLAYER_INFO_BANNER_HEIGHT = 80 # Height for the top player info banner
-TOP_PADDING = 20 # Padding from the top of the screen for text
+TOP_PADDING = 0 # Padding from the top of the screen for text (Increased by 5)
 LEFT_PADDING = 10 # Padding from the left of the main game area for text
 RIGHT_MENU_X_START = GAME_AREA_WIDTH # X-coordinate where the right menu begins
 
@@ -804,16 +804,16 @@ class GameView(arcade.View):
         bg_rect_width = GAME_AREA_WIDTH 
         text_box_height_for_log = 150 
         bg_rect_height = text_box_height_for_log + (2 * TEXT_AREA_LINE_HEIGHT) 
-        bg_rect_center_y = description_y - (bg_rect_height / 2) 
-        inventory_views = [ # This list is used to determine if the full-panel background overlay is drawn
+        bg_rect_center_y = description_y - (bg_rect_height / 2) # Default for text log box
+        inventory_views_for_overlay = [ # This list is used to determine if the full-panel background overlay is drawn
             "inventory_management", "view_bags", 
             "loot_decision_display", "select_item_to_drop_for_loot_display",
             "item_details_display", "select_item_to_equip_display" 
         ]
-        if self.display_mode in inventory_views:
-            bg_rect_height = SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT 
-            bg_rect_center_y = (SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT) / 2 
-        arcade.draw_rectangle_filled(
+        if self.display_mode in inventory_views_for_overlay: # Corrected condition
+            bg_rect_height = SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT # Height of the main game panel
+            bg_rect_center_y = (SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT) / 2 # Center of the main game panel
+        arcade.draw_rectangle_filled( # This draws the semi-transparent background
             bg_rect_center_x,
             bg_rect_center_y, 
             bg_rect_width,
@@ -857,13 +857,13 @@ class GameView(arcade.View):
         icon_full_panel_views = ["inventory_management", "view_bags", "loot_decision_display", "select_item_to_drop_for_loot_display"]
         if self.display_mode in icon_full_panel_views:
             self.scrollable_text_rect_on_screen = (
-                0,  # left_x of the game panel (screen coordinates)
-                PLAYER_INFO_BANNER_HEIGHT, # bottom_y of the game panel (screen coordinates)
+                0,  # left_x of the game panel
+                0,  # bottom_y of the game panel (bottom of the screen)
                 GAME_AREA_WIDTH,  # width of the game panel
                 SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT # height of the game panel
             )
-            # For icon views, content drawing starts from the top of this rect
-            _scroll_area_top_y_for_lines = self.scrollable_text_rect_on_screen[1] + self.scrollable_text_rect_on_screen[3] # bottom_y + height = top_y
+            # For icon views, content drawing starts from the top of the game panel area (below banner)
+            _scroll_area_top_y_for_lines = SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT - (TEXT_AREA_LINE_HEIGHT // 2) # Shift down slightly
         else: # Text-based views
             self.scrollable_text_rect_on_screen = (
                 description_x,  
