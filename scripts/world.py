@@ -39,6 +39,7 @@ class World():
         # its inventory/stats won't be ready immediately.
         # It's better to ensure self.player is fully set up if self.player.update_stats() is called early.
         self.enemy_list = self.builder.build_enemies()
+        self.grimoire_entries = self.builder.build_grimoire_entries() # Load grimoire entries
         self.all_items = self.builder.build_items()
         self.player.inventory.set_items(self.all_items)
         self.loot.set_items(self.all_items)
@@ -64,6 +65,10 @@ class World():
         self.in_loot_decision_mode = False
         self.pending_loot_item = None
         self.available_items_to_equip = [] # For the new equip functionality
+
+        # Grimoire state
+        self.selected_grimoire_entry = None # Stores the currently viewed grimoire entry dict
+
 
 
     def append_message(self, message):
@@ -335,6 +340,22 @@ class World():
         else:
             self.append_message(f"'{choice_text}' is not a valid action or you cannot do that here.")
             return "area_description" # Default to showing message in log for invalid actions
+
+    def get_all_grimoire_entries(self):
+        """Returns the list of all loaded grimoire entries."""
+        return self.grimoire_entries
+
+    def get_grimoire_entry_by_title_and_category(self, title, category):
+        """
+        Finds and returns a specific grimoire entry by its title and category.
+        Returns the entry dictionary or None if not found.
+        """
+        for entry in self.grimoire_entries:
+            if entry['title'] == title and entry['category'] == category:
+                return entry
+        self.append_message(f"Error: Grimoire entry '{category}: {title}' not found.")
+        return None
+
 
 
     def handle_travel_choice(self, destination_name):

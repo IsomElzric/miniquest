@@ -16,6 +16,7 @@ ASSETS_DIR = os.path.join(PACKAGE_ROOT_DIR, 'assets')
 LOCATION_PATH = os.path.join(ASSETS_DIR, 'locations')
 ENEMY_PATH = os.path.join(ASSETS_DIR, 'enemies')
 ITEM_PATH = os.path.join(ASSETS_DIR, 'items')
+GRIMOIRE_PATH = os.path.join(ASSETS_DIR, 'grimoire_entries') # New path for grimoire entries
 
 PLAYER_ATTACK = 3
 PLAYER_DEFENSE = 3
@@ -203,3 +204,39 @@ class Builder():
                         print(f"Error reading item file {filepath}: {e}\n")
         
         return item_list
+
+    def build_grimoire_entries(self):
+        """
+        Builds a list of grimoire entries from .txt files.
+        Each entry is a dictionary: {'title': str, 'category': str, 'description': str}
+        """
+        grimoire_entries_list = []
+        if not os.path.exists(GRIMOIRE_PATH):
+            self.message_log(f"Warning: Grimoire entries directory not found at {GRIMOIRE_PATH}")
+            print(f"Warning: Grimoire entries directory not found at {GRIMOIRE_PATH}")
+            return grimoire_entries_list
+
+        for dirpath, _, filenames in os.walk(GRIMOIRE_PATH):
+            for filename in filenames:
+                if filename.endswith(".txt"):
+                    filepath = os.path.join(dirpath, filename)
+                    try:
+                        with open(filepath, "r") as file:
+                            description_lines = [line.strip() for line in file if line.strip()]
+                            description_text = " ".join(description_lines)
+
+                        topic_title = os.path.splitext(filename)[0].capitalize()
+                        
+                        # Determine category from the subfolder name
+                        relative_dirpath = os.path.relpath(dirpath, GRIMOIRE_PATH)
+                        category = "General" # Default category if not in a subfolder
+                        if relative_dirpath and relative_dirpath != '.':
+                            category = os.path.basename(relative_dirpath).replace('_', ' ').capitalize()
+
+                        entry = {'title': topic_title, 'category': category, 'description': description_text}
+                        grimoire_entries_list.append(entry)
+                    except Exception as e:
+                        self.message_log(f"Error reading grimoire file {filepath}: {e}")
+                        print(f"Error reading grimoire file {filepath}: {e}")
+        
+        return grimoire_entries_list
