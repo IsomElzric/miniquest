@@ -791,11 +791,18 @@ class GameView(arcade.View):
             self.current_menu_options = options_text
         elif menu_type == "item_details_menu": 
             options_text = []
-            if self.selected_inventory_item and self.selected_inventory_item.type in EQUIPABLE_TYPES:
-                options_text.append("Equip")
-            if self.selected_inventory_item and self.selected_item_source and \
-               not self.selected_item_source.startswith("equipped_"):
-                options_text.append("Drop Item") 
+            if self.selected_inventory_item:
+                if self.selected_inventory_item.type in EQUIPABLE_TYPES: # Condition for "Equip"
+                    options_text.append("Equip")
+                # Add Sell Item option for wealth items that are not equipped
+                if self.selected_inventory_item.type == "wealth" and \
+                   self.selected_item_source and not self.selected_item_source.startswith("equipped_"):
+                    options_text.append("Sell Item")
+
+                if self.selected_inventory_item and self.selected_item_source and \
+                not self.selected_item_source.startswith("equipped_"):
+                    options_text.append("Drop Item") 
+
             options_text.append("Back to Inventory")
             self.current_menu_options = options_text
         elif menu_type == "select_item_to_drop_for_loot_menu": 
@@ -1619,6 +1626,34 @@ class GameView(arcade.View):
                         self._prepare_scrollable_text_for_current_mode()
                         return 
                 
+                elif command == "Sell Item" and self.active_menu_type == "item_details_menu":
+                    if self.selected_inventory_item and self.selected_inventory_item.type == "wealth" and \
+                       self.selected_item_source and not self.selected_item_source.startswith("equipped_"):
+                        
+                        previous_level = self.player.level # Store level before selling
+
+                        success = self.player.inventory.sell_wealth(
+                            self.selected_inventory_item,
+                            self.selected_item_source, # 'carried' or 'strongbox'
+                            self.world.append_message
+                        )
+                        if success:
+                            self.player.update_stats() # Crucial for accounting
+                            self.world.append_message(f"Your total wealth is now {self.player.inventory.income}.")
+                            if self.player.level > previous_level:
+                                self.world.append_message(f"You feel more experienced! You are now level {self.player.level}.")
+                        # If not success, sell_wealth should have logged an error via append_message
+
+                        # Common cleanup and view refresh logic
+                        self.selected_inventory_item = None
+                        self.selected_item_source = None
+                        self.display_mode = "inventory_management"
+                        self.update_menu_options("inventory_management")
+                        self.log_messages_to_display.clear()
+                        self.log_messages_to_display.extend(self.world.get_messages())
+                        self._prepare_scrollable_text_for_current_mode()
+                        return
+                
                 elif command == "Save & Quit":
                     if self.world.save_game():
                         print("Game saved. Exiting.")
@@ -1763,7 +1798,7 @@ class GameView(arcade.View):
                     max_scroll = max(0, self.current_view_content_height - s_rect_actual_height)
                     
                     self.scroll_offset_y = arcade.clamp(self.scroll_offset_y, 0, max_scroll)
-                    print(f"GameView Scroll Clamp: current_offset_y={self.scroll_offset_y:.2f}, max_scroll={max_scroll:.2f}, content_h={self.current_view_content_height:.2f}, viewport_h={s_rect_actual_height:.2f}")
+                    # print(f"GameView Scroll Clamp: current_offset_y={self.scroll_offset_y:.2f}, max_scroll={max_scroll:.2f}, content_h={self.current_view_content_height:.2f}, viewport_h={s_rect_actual_height:.2f}")
 
 def main():
     world_module_path = getattr(sys.modules.get(World.__module__), '__file__', 'N/A')

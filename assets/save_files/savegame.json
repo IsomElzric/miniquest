@@ -9,19 +9,23 @@
         "health_base": 5,
         "max_health": 7,
         "current_health": 7,
-        "attack_mod": 0,
+        "attack_mod": 3,
         "defense_mod": 0,
-        "speed_mod": 0,
-        "_damage": 1,
+        "speed_mod": 1,
+        "_damage": 2,
         "_mitigation": 1,
-        "_finesse": 0,
+        "_finesse": 3,
         "is_player": true,
         "inventory": {
             "stored_items_names": [],
             "equipped_items_names": {
-                "Held": "Makeshift spear",
+                "Held": "Butcher's cleaver",
                 "Body": null,
-                "Trinkets": []
+                "Trinkets": [
+                    "Carrion-talon",
+                    "Worn lucky charm",
+                    "Gritstone fragment"
+                ]
             },
             "owned_items_names": [
                 "Makeshift spear",
@@ -30,17 +34,21 @@
                 "Scrap relic",
                 "Splintered club",
                 "Scrap metal",
-                "Tattered hide"
+                "Tattered hide",
+                "Polished bone shards",
+                "Carrion-talon",
+                "Grinding stone",
+                "Gritstone fragment",
+                "Worn lucky charm",
+                "Butcher's cleaver"
             ],
-            "income": 0,
+            "income": 10,
             "strongbox_items_names": [
-                "Pre-cataclysmic glass shards",
                 "Roughwood",
-                "Scrap relic",
-                "Splintered club",
-                "Scrap relic",
                 "Scrap metal",
-                "Tattered hide"
+                "Tattered hide",
+                "Tattered hide",
+                "Grinding stone"
             ]
         }
     },

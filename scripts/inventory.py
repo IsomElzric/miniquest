@@ -243,7 +243,7 @@ class Inventory():
             elif action == 3:
                 choice = int(input("What would you like to sell? "))
                 print()
-                self.sell_wealth(self.stored_items[choice - 1])
+                self.sell_wealth(self.stored_items[choice - 1], source_location_name="carried", message_log_func=print)
 
             elif action == 4:
                 break
@@ -269,13 +269,34 @@ class Inventory():
     
         return total_stats
     
-    def sell_wealth(self, item):
-        if item.ammount > 1:
-            item.ammount -= 1
-            self.income += item.worth
+    def sell_wealth(self, item_to_sell, source_location_name, message_log_func):
+        """
+        Sells a single instance of a wealth item from the specified source.
+        Updates income and removes the item from the source list.
+        """
+        if not message_log_func: message_log_func = lambda x: print(x) # Fallback logger
+
+        if item_to_sell.type != 'wealth':
+            message_log_func(f"Cannot sell {item_to_sell.name}: it is not a wealth item.")
+            return False
+
+        source_list = None
+        if source_location_name == "carried":
+            source_list = self.stored_items
+        elif source_location_name == "strongbox":
+            source_list = self.strongbox_items
         else:
-            self.stored_items.remove(item)
-            self.income += item.worth
+            message_log_func(f"Error: Unknown source '{source_location_name}' for selling {item_to_sell.name}.")
+            return False
+
+        if item_to_sell in source_list:
+            self.income += item_to_sell.worth
+            source_list.remove(item_to_sell)
+            message_log_func(f"You sold {item_to_sell.name} for {item_to_sell.worth} wealth.")
+            return True
+        else:
+            message_log_func(f"Error: Could not find {item_to_sell.name} in {source_location_name} to sell.")
+            return False
 
     def to_dict(self):
         inventory_data = {
