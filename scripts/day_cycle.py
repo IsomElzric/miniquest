@@ -58,3 +58,20 @@ class DayCycle:
         if self.is_night():
             return 2 
         return 1.0
+
+    def to_dict(self):
+        return {
+            "hour": self.hour,
+            "max_hours_before_exhaustion": self.max_hours_before_exhaustion,
+            "night_starts_at_hour": self.night_starts_at_hour,
+            "_night_announced": self._night_announced,
+            "_dusk_announced": self._dusk_announced,
+        }
+
+    @classmethod
+    def from_dict(cls, data, message_log_func):
+        instance = cls(message_log_func)
+        instance.hour = data.get("hour", 0)
+        instance._night_announced = data.get("_night_announced", False)
+        instance._dusk_announced = data.get("_dusk_announced", False)
+        return instance

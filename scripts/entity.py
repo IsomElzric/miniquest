@@ -66,7 +66,7 @@ class Entity():
 
     @property
     def attack(self):
-        return self._attack
+        return self._attack + self.attack_mod
     
     @attack.setter
     def attack(self, value):
@@ -74,7 +74,7 @@ class Entity():
 
     @property
     def defense(self):
-        return self._defense
+        return self._defense + self.defense_mod
     
     @defense.setter
     def defense(self, value):
@@ -82,7 +82,7 @@ class Entity():
 
     @property
     def speed(self):
-        return self._speed
+        return self._speed + self.speed_mod
     
     @speed.setter
     def speed(self, value):
@@ -96,7 +96,7 @@ class Entity():
     
     def roll_attack(self, message_log): 
         r = Random()
-        attack = self.attack + self.attack_mod
+        attack = self.attack # + self.attack_mod
         
         attack_modifier_high = self.round_up(attack * 2) + self.damage
         attack_modifier_low = self.round_up(attack / 2) + self.damage
@@ -111,7 +111,7 @@ class Entity():
     
     def roll_crit(self, damage, message_log): 
         r = Random()
-        speed = self.speed + self.speed_mod
+        speed = self.speed # + self.speed_mod
 
         crit_modifier = self.round_up((speed / 2) + self.finesse)
         crit_chance = 10
@@ -136,7 +136,7 @@ class Entity():
             return damage
         
     def take_damage(self, damage, message_log, combat=True): 
-        defense = self.defense + self.defense_mod
+        defense = self.defense # + self.defense_mod
         if combat:
             total_damage = damage - self.round_up((defense / 2) + self.mitigation)
             
@@ -245,4 +245,55 @@ class Entity():
         success = self.inventory.equip_item(item_to_equip, source_location_name=source_location_name, message_log_func=message_log_func)
         if success:
             self.update_stats()
+        # Inventory.equip_item will handle logging success/failure
+
+    def to_dict(self):
+        entity_data = {
+            "name": self.name,
+            "level": self.level,
+            "target": self.target,
+            "_attack": self._attack,
+            "_defense": self._defense,
+            "_speed": self._speed,
+            "health_base": self.health_base,
+            "max_health": self.max_health,
+            "current_health": self.current_health,
+            "attack_mod": self.attack_mod,
+            "defense_mod": self.defense_mod,
+            "speed_mod": self.speed_mod,
+            "_damage": self._damage,
+            "_mitigation": self._mitigation,
+            "_finesse": self._finesse,
+            "is_player": self.is_player,
+            "inventory": self.inventory.to_dict(),
+        }
+        return entity_data
+
+    @classmethod
+    def from_dict(cls, data, all_items_lookup_map, message_log_func):
+        instance = cls()
+        instance.name = data.get("name", "Loaded Entity")
+        instance.level = data.get("level", 1)
+        instance.target = data.get("target", 20)
+        instance._attack = data.get("_attack", 1)
+        instance._defense = data.get("_defense", 1)
+        instance._speed = data.get("_speed", 1)
+        
+        instance.attack_mod = data.get("attack_mod", 0)
+        instance.defense_mod = data.get("defense_mod", 0)
+        instance.speed_mod = data.get("speed_mod", 0)
+        instance._damage = data.get("_damage", 0)
+        instance._mitigation = data.get("_mitigation", 0)
+        instance._finesse = data.get("_finesse", 0)
+        instance.is_player = data.get("is_player", False)
+        
+        inventory_data = data.get("inventory")
+        if inventory_data:
+            instance.inventory.from_dict(inventory_data, all_items_lookup_map, message_log_func)
+
+        instance.update_stats() # Recalculate derived stats like max_health
+        instance.max_health = data.get("max_health", instance.max_health) # Restore saved max_health
+        instance.current_health = data.get("current_health", instance.max_health)
+        instance.current_health = min(instance.current_health, instance.max_health)
+        return instance
         # Inventory.equip_item will handle logging success/failure

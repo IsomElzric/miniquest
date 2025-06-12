@@ -2,7 +2,7 @@
 from abc import ABC, abstractmethod
 from scripts.combat import Combat
 from scripts.entity import Entity
-from scripts.builder import Builder # Ensure Builder is imported
+from scripts.builder import Builder, ASSETS_DIR as BUILDER_ASSETS_DIR # Import ASSETS_DIR
 from scripts.location import Location
 from scripts.inventory import Inventory, EQUIPABLE_TYPES # Import EQUIPABLE_TYPES
 from scripts.loot import Loot
@@ -10,6 +10,7 @@ from scripts.day_cycle import DayCycle # Import the new DayCycle class
 import sys
 import os
 import random
+import json # For saving and loading
 
 # Add these lines at the top of world.py to enable logging
 import logging
@@ -20,6 +21,9 @@ import logging
 
 class World():
     def __init__(self) -> None:
+        self.SAVE_GAME_DIR = os.path.join(BUILDER_ASSETS_DIR, 'save_files')
+        self.SAVE_GAME_FILENAME = "savegame.json"
+
         print("--- World.__init__ called! ---") # TRACE 1: See if World is initialized multiple times
         # --- CRITICAL FIX: Initialize message_log FIRST ---
         self.message_log = []
@@ -574,3 +578,93 @@ class World():
         self.append_message("You enter your camp and begin to prepare.")
         # self.player.print_entity(self.append_message) # Player stats are in the banner
         # The GUI will now handle displaying inventory options.
+
+    def to_dict(self):
+        world_data = {
+            "player": self.player.to_dict(),
+            "current_area_name": self.current_area.name,
+            "camp": self.camp,
+            "day_cycle": self.day_cycle.to_dict(),
+            "message_log": list(self.message_log),
+            # area_list, enemy_list, all_items, grimoire_entries are rebuilt by Builder on load.
+        }
+        return world_data
+
+    def save_game(self):
+        self.append_message("Saving game...")
+        print("Attempting to save game...") 
+        try:
+            if not os.path.exists(self.SAVE_GAME_DIR):
+                os.makedirs(self.SAVE_GAME_DIR)
+                print(f"Created save directory: {self.SAVE_GAME_DIR}")
+
+            save_path = os.path.join(self.SAVE_GAME_DIR, self.SAVE_GAME_FILENAME)
+            world_data = self.to_dict()
+
+            with open(save_path, 'w') as f:
+                json.dump(world_data, f, indent=4)
+            
+            self.append_message("Game saved successfully.")
+            print(f"Game saved to {save_path}")
+            return True
+        except Exception as e:
+            error_msg = f"Error saving game: {e}"
+            self.append_message(error_msg)
+            print(error_msg)
+            return False
+
+    @classmethod
+    def from_dict(cls, data, temp_message_log_func):
+        world = cls() # Calls __init__, sets up builder, default items, areas etc.
+        
+        all_items_lookup_map = {item.name: item for item in world.all_items}
+
+        player_data = data.get("player")
+        if player_data:
+            world.player = Entity.from_dict(player_data, all_items_lookup_map, world.append_message)
+            world.player.is_player = True
+        else:
+            world.create_character() 
+            if temp_message_log_func: temp_message_log_func("Warning: Player data not found. Created new character.")
+
+        world.set_location(data.get("current_area_name", "Lastholm"))
+        world.camp = data.get("camp", "Lastholm")
+        # Ensure camp is valid after setting location
+        if world.current_area.name != world.camp :
+            if world.current_area.name in ['Lastholm', 'Aethelwood', 'Scorlends', 'Shadowsun', 'Broken hearth', 'Quiet glade', 'Iron spring', 'Last anvil']:
+                 world.camp = world.current_area.name
+
+        day_cycle_data = data.get("day_cycle")
+        if day_cycle_data:
+            world.day_cycle = DayCycle.from_dict(day_cycle_data, world.append_message)
+        
+        world.message_log = list(data.get("message_log", ["Welcome back! Game loaded."]))
+        
+        # Reset transient states
+        world.in_travel_selection_mode = False
+        world.active_combat_instance = None
+        # ... other transient states ...
+        
+        if temp_message_log_func: temp_message_log_func("World.from_dict: Game data processed.")
+        return world
+
+    @classmethod
+    def load_game(cls):
+        save_game_dir = os.path.join(BUILDER_ASSETS_DIR, 'save_files')
+        save_game_filename = "savegame.json"
+        save_path = os.path.join(save_game_dir, save_game_filename)
+
+        print(f"Attempting to load game from {save_path}...")
+        if not os.path.exists(save_path):
+            print("No save file found.")
+            return None 
+        
+        try:
+            with open(save_path, 'r') as f:
+                loaded_data = json.load(f)
+            world_instance = cls.from_dict(loaded_data, lambda msg: print(f"LOAD_STATUS: {msg}"))
+            print("Game loaded successfully (from World.load_game).")
+            return world_instance
+        except Exception as e:
+            print(f"Error loading game: {e}")
+            return None

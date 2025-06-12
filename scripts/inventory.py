@@ -276,3 +276,54 @@ class Inventory():
         else:
             self.stored_items.remove(item)
             self.income += item.worth
+
+    def to_dict(self):
+        inventory_data = {
+            "stored_items_names": [item.name for item in self.stored_items],
+            "equipped_items_names": {
+                "Held": self.equipped_items["Held"].name if self.equipped_items["Held"] else None,
+                "Body": self.equipped_items["Body"].name if self.equipped_items["Body"] else None,
+                "Trinkets": [trinket.name for trinket in self.equipped_items["Trinkets"]],
+            },
+            "owned_items_names": [item.name for item in self.owned_items],
+            "income": self.income,
+            "strongbox_items_names": [item.name for item in self.strongbox_items],
+        }
+        return inventory_data
+
+    def from_dict(self, data, all_items_lookup_map, message_log_func):
+        self.income = data.get("income", 0)
+        self.stored_items.clear()
+        self.strongbox_items.clear()
+        self.equipped_items = {'Held': None, 'Body': None, 'Trinkets': []} # Reset
+        self.owned_items.clear()
+
+        for item_name in data.get("stored_items_names", []):
+            item_obj = all_items_lookup_map.get(item_name)
+            if item_obj:
+                self.stored_items.append(item_obj)
+            elif message_log_func: message_log_func(f"Warning: Item '{item_name}' not found during load (stored).")
+
+        for item_name in data.get("strongbox_items_names", []):
+            item_obj = all_items_lookup_map.get(item_name)
+            if item_obj:
+                self.strongbox_items.append(item_obj)
+            elif message_log_func: message_log_func(f"Warning: Item '{item_name}' not found during load (strongbox).")
+
+        for item_name in data.get("owned_items_names", []):
+            item_obj = all_items_lookup_map.get(item_name)
+            if item_obj and item_obj not in self.owned_items:
+                self.owned_items.append(item_obj)
+            elif not item_obj and message_log_func: message_log_func(f"Warning: Item '{item_name}' not found during load (owned).")
+
+        equipped_data = data.get("equipped_items_names", {})
+        for slot in ["Held", "Body"]:
+            item_name = equipped_data.get(slot)
+            if item_name:
+                item_obj = all_items_lookup_map.get(item_name)
+                if item_obj: self.equipped_items[slot] = item_obj
+                elif message_log_func: message_log_func(f"Warning: Equipped item '{item_name}' for slot {slot} not found.")
+        for item_name in equipped_data.get("Trinkets", []):
+            item_obj = all_items_lookup_map.get(item_name)
+            if item_obj: self.equipped_items["Trinkets"].append(item_obj)
+            elif message_log_func: message_log_func(f"Warning: Equipped trinket '{item_name}' not found.")

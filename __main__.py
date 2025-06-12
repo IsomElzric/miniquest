@@ -247,12 +247,32 @@ class MenuView(arcade.View):
                 game_view = GameView(game_world)
                 self.window.show_view(game_view)
             elif action == "load_game":
-                print("--- Load Game button pressed! (Not implemented) ---")
-                # Placeholder: For now, acts like New Game
-                game_world = World()
-                game_world.create_character()
-                game_view = GameView(game_world)
-                self.window.show_view(game_view)
+                print("--- Load Game button pressed! ---")
+                loaded_world = World.load_game()
+                if loaded_world:
+                    game_view = GameView(loaded_world)
+                    
+                    # Prime GameView with loaded world's state
+                    game_view.log_messages_to_display.clear() 
+                    # Ensure the world's current area description is in the log for initial display
+                    loaded_world.display_current_area() # This appends to world's log
+                    game_view.log_messages_to_display.extend(loaded_world.get_messages()) 
+                    
+                    game_view.display_mode = "area_description"
+                    game_view.update_menu_options("main")
+                    game_view.load_current_area_art() 
+                    game_view._prepare_scrollable_text_for_current_mode()
+
+                    self.window.show_view(game_view)
+                else:
+                    print("Failed to load game or no save file found.")
+                    # Optionally, display a message to the user on the MenuView itself.
+                    # For now, we'll just print to console.
+                    # To show a message on screen, you might add a temporary text element to MenuView
+                    # or switch to a simple "message view".
+                    # Example: self.show_load_error_message()
+                    pass # Stay on MenuView
+
             elif action == "grimoire":
                 print("--- Grimoire button pressed! (Main Menu) ---")
                 # Instantiate Builder to load grimoire entries
@@ -723,12 +743,13 @@ class GameView(arcade.View):
         self.menu_action_buttons.clear() 
 
         if menu_type == "main":
-            options_text = ["Fight", "Travel", "Rest"] 
             if self.world.current_area.name == self.world.camp:
-                options_text[0] = "1. Prepare" 
+                options_text = ["Prepare", "Travel", "Rest", "Save & Quit"]  
             else: 
-                options_text.insert(2, "Check Bags") 
+                options_text = ["Fight", "Travel", "Check Bags", "Rest",  "Save & Quit"]
+
             self.current_menu_options = options_text
+
         elif menu_type == "travel":
             connections = self.world.available_travel_destinations 
             options_text = [f"{i+1}. {conn}" for i, conn in enumerate(connections)]
@@ -1597,6 +1618,19 @@ class GameView(arcade.View):
                         self.log_messages_to_display.extend(self.world.get_messages()) 
                         self._prepare_scrollable_text_for_current_mode()
                         return 
+                
+                elif command == "Save & Quit":
+                    if self.world.save_game():
+                        print("Game saved. Exiting.")
+                        arcade.exit()
+                    else:
+                        # Error message already appended to world log by save_game()
+                        self.log_messages_to_display.clear()
+                        self.log_messages_to_display.extend(self.world.get_messages())
+                        # Stay in current view, menu options remain the same
+                        self._prepare_scrollable_text_for_current_mode()
+                    return
+
                 elif command == "Check Bags": 
                     self.pre_bags_view_mode = self.display_mode
                     self.pre_bags_menu_type = self.active_menu_type 
