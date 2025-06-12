@@ -29,7 +29,8 @@ BUTTON_FONT_SIZE = 18
 
 # --- Game View Constants ---
 PLAYER_INFO_BANNER_HEIGHT = 80 # Height for the top player info banner
-TOP_PADDING = 0 # Padding from the top of the screen for text (Increased by 5)
+TOP_PADDING = 0 # Padding from the bottom of banner for text-based views
+ICON_PANEL_TOP_MARGIN = 5 # Padding from the bottom of banner for icon-based views
 LEFT_PADDING = 10 # Padding from the left of the main game area for text
 RIGHT_MENU_X_START = GAME_AREA_WIDTH # X-coordinate where the right menu begins
 
@@ -863,7 +864,7 @@ class GameView(arcade.View):
                 SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT # height of the game panel
             )
             # For icon views, content drawing starts from the top of the game panel area (below banner)
-            _scroll_area_top_y_for_lines = SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT - (TEXT_AREA_LINE_HEIGHT // 2) # Shift down slightly
+            _scroll_area_top_y_for_lines = SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT - ICON_PANEL_TOP_MARGIN 
         else: # Text-based views
             self.scrollable_text_rect_on_screen = (
                 description_x,  
@@ -873,6 +874,9 @@ class GameView(arcade.View):
             )
             # _scroll_area_top_y_for_lines is already set correctly for text views from earlier logic
 
+        # --- Set viewport for scrollable content ---
+        # Rolling back viewport changes. Clipping will rely on drawing logic within bounds.
+        
         # --- Text-based views drawing loop ---
         if self.display_mode in ["welcome_screen", "area_description", "combat_log", "item_details_display", "select_item_to_equip_display"]: # Ensure all text views are covered
             if self.current_scrollable_lines:
@@ -886,10 +890,10 @@ class GameView(arcade.View):
                     line_text_content = self.current_scrollable_lines[i]
                     line_y_offset_from_content_top = i * TEXT_AREA_LINE_HEIGHT
                     draw_y_on_screen = _scroll_area_top_y_for_lines - (line_y_offset_from_content_top - self.scroll_offset_y)
-                    # Clipping check against self.scrollable_text_rect_on_screen
-                    if self.scrollable_text_rect_on_screen and \
-                       draw_y_on_screen <= self.scrollable_text_rect_on_screen[1] + self.scrollable_text_rect_on_screen[3] and \
-                       draw_y_on_screen - TEXT_AREA_LINE_HEIGHT > self.scrollable_text_rect_on_screen[1] - TEXT_AREA_LINE_HEIGHT:
+                    # The old per-element clipping check can be removed due to set_viewport, but keeping it doesn't hurt.
+                    # For simplicity with set_viewport, we can remove the complex condition here.
+                    # We just need to ensure we don't try to draw excessively off-screen for performance.
+                    if abs(draw_y_on_screen - (_scroll_area_top_y_for_lines - self.scrollable_text_rect_on_screen[3]/2)) < self.scrollable_text_rect_on_screen[3] * 1.5: # Draw if roughly near viewport
                         arcade.draw_text(
                             line_text_content,
                             description_x, 
@@ -1106,6 +1110,12 @@ class GameView(arcade.View):
             current_draw_y -= (capacity_line_h + ITEM_SECTION_SPACING)
 
         # --- Right Panel Drawing (Menu Buttons - Remains the same) ---
+        # Rolling back viewport reset. Arcade's default viewport should be active here.
+        # Ensure the window's default viewport is active for the right panel.
+        arcade.get_window().use() # This should reset to the default camera and viewport
+
+        # Now draw the right panel and its buttons
+        # --- This block was moved back from on_update to on_draw ---
         if self.right_panel_background_texture:
             arcade.draw_texture_rectangle(
                 RIGHT_MENU_X_START + MENU_PANEL_WIDTH / 2,
@@ -1354,8 +1364,8 @@ class GameView(arcade.View):
                 # Apply scroll logic if there's content to scroll
                 if self.current_view_content_height > 0:
                     # Natural scrolling: wheel down (scroll_y is negative) -> content moves up (scroll_offset_y increases)
-                    # To achieve: Wheel UP (scroll_y > 0) -> scroll_offset_y DECREASES -> content moves DOWN
-                    self.scroll_offset_y -= scroll_y * TEXT_AREA_LINE_HEIGHT * 2 
+                    # This line should be correct for natural scrolling if text views use +offset and icon views use +offset in drawing
+                    self.scroll_offset_y -= scroll_y * TEXT_AREA_LINE_HEIGHT * 2
                     
                     # Use the actual height of the scrollable rectangle for clamping
                     s_rect_actual_height = self.scrollable_text_rect_on_screen[3] 

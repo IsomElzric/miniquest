@@ -17,9 +17,9 @@ LOCATION_PATH = os.path.join(ASSETS_DIR, 'locations')
 ENEMY_PATH = os.path.join(ASSETS_DIR, 'enemies')
 ITEM_PATH = os.path.join(ASSETS_DIR, 'items')
 
-PLAYER_ATTACK = 10
+PLAYER_ATTACK = 3
 PLAYER_DEFENSE = 3
-PLAYER_SPEED = 10
+PLAYER_SPEED = 3
 
 class Builder():
     def __init__(self, message_log) -> None:  # Accept message_log here
