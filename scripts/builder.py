@@ -27,16 +27,21 @@ class Builder():
         self.player = Entity()
         self.message_log = message_log # Store message_log
 
-    def create_character(self):
+    def create_character(self, name="Nameless Adventurer", background_stats=None):
         # This method is now non-interactive for GUI compatibility.
         # It sets up a default character. The GUI will handle input.
-        self.player.name = "Nameless Adventurer" # Default name
+        self.player.name = name
         
-        # Default stats for a balanced start
-        self.player.attack = PLAYER_ATTACK
-        self.player.defense = PLAYER_DEFENSE
-        self.player.speed = PLAYER_SPEED
-        
+        if background_stats:
+            self.player.attack = background_stats.get("attack", PLAYER_ATTACK)
+            self.player.defense = background_stats.get("defense", PLAYER_DEFENSE)
+            self.player.speed = background_stats.get("speed", PLAYER_SPEED)
+        else:
+            # Default stats for a balanced start if no background_stats provided
+            self.player.attack = PLAYER_ATTACK
+            self.player.defense = PLAYER_DEFENSE
+            self.player.speed = PLAYER_SPEED
+
         self.player.update_stats()
         self.player.reset_health()
         # Ensure print_entity uses the message_log

@@ -86,9 +86,9 @@ class World():
         self.message_log.clear() # Clear the internal log after retrieval
         return messages
 
-    def create_character(self):
+    def create_character(self, name="Nameless Adventurer", background_stats=None):
         # Builder.create_character now sets default player properties
-        self.builder.create_character()
+        self.builder.create_character(name=name, background_stats=background_stats)
         self.player = self.builder.get_player()
         self.player.is_player = True
         self.append_message(f"You have created a new character: {self.player.name}!")

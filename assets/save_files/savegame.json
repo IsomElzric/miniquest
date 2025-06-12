@@ -1,17 +1,17 @@
 {
     "player": {
         "name": "Nameless adventurer",
-        "level": 1,
-        "target": 20,
+        "level": 2,
+        "target": 40,
         "_attack": 3,
         "_defense": 3,
         "_speed": 3,
-        "health_base": 5,
-        "max_health": 7,
-        "current_health": 7,
-        "attack_mod": 3,
-        "defense_mod": 0,
-        "speed_mod": 1,
+        "health_base": 10,
+        "max_health": 13,
+        "current_health": 13,
+        "attack_mod": 4,
+        "defense_mod": 2,
+        "speed_mod": 3,
         "_damage": 2,
         "_mitigation": 1,
         "_finesse": 3,
@@ -24,7 +24,10 @@
                 "Trinkets": [
                     "Carrion-talon",
                     "Worn lucky charm",
-                    "Gritstone fragment"
+                    "Gritstone fragment",
+                    "Survivor's tooth",
+                    "Echoing locket",
+                    "Forgotten cog"
                 ]
             },
             "owned_items_names": [
@@ -40,20 +43,41 @@
                 "Grinding stone",
                 "Gritstone fragment",
                 "Worn lucky charm",
-                "Butcher's cleaver"
+                "Butcher's cleaver",
+                "Scrap relic",
+                "Polished bone shards",
+                "Tattered hide",
+                "Survivor's tooth",
+                "Hardened resin nodules",
+                "Echoing locket",
+                "Scrap relic",
+                "Roughwood",
+                "Forgotten cog",
+                "Corroded data-plates",
+                "Polished bone shards",
+                "Scrap relic",
+                "Corroded data-plates",
+                "Grinding stone",
+                "Tattered hide",
+                "Polished bone shards"
             ],
-            "income": 10,
+            "income": 33,
             "strongbox_items_names": [
                 "Roughwood",
                 "Scrap metal",
                 "Tattered hide",
                 "Tattered hide",
-                "Grinding stone"
+                "Grinding stone",
+                "Scrap metal",
+                "Tattered hide",
+                "Roughwood",
+                "Grinding stone",
+                "Tattered hide"
             ]
         }
     },
-    "current_area_name": "Lastholm",
-    "camp": "Lastholm",
+    "current_area_name": "Broken hearth",
+    "camp": "Broken hearth",
     "day_cycle": {
         "hour": 0,
         "max_hours_before_exhaustion": 12,
