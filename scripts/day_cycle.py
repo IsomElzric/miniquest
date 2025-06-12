@@ -56,5 +56,5 @@ class DayCycle:
     def get_enemy_night_modifier(self):
         """Returns a stat modifier for enemies if it's night."""
         if self.is_night():
-            return 1.2 
+            return 2 
         return 1.0
