@@ -1,0 +1,116 @@
+{
+    "attack_dominance": {
+        "type": "passive",
+        "name": "Attack Dominance",
+        "description": "When gaining a level, a Quarryman might receive a *guaranteed bonus to their Attack stat* that is notably higher than other backgrounds, reflecting their raw, focused power.",
+        "effect": {
+            "stat_bonus_percent": { "attack": 0.1 },
+            "notes": "Example: +10% to attack stat."
+        }
+    },
+    "leverage_weakness": {
+        "type": "passive_or_active_combat",
+        "name": "Leverage Weakness",
+        "description": "Description of how leveraging weakness works (e.g., bonus damage against certain enemy types, or an active skill to debuff an enemy).",
+        "effect": {
+            "conditional_damage_bonus": { "target_status": "vulnerable", "bonus_amount": 5 },
+            "notes": "Example: Deals +5 damage if target is vulnerable."
+        }
+    },
+    "shattering_blow": {
+        "type": "active_combat",
+        "name": "Shattering Blow",
+        "description": "A powerful attack that can break enemy defenses or deal significant damage.",
+        "cost": { "stamina": 10, "action_points": 1 },
+        "effect": {
+            "damage_multiplier": 1.2,
+            "status_effect_on_target": { "name": "armor_reduced", "duration_turns": 2, "magnitude": -2 },
+            "notes": "Example: Deals 120% damage and reduces target's armor by 2 for 2 turns."
+        }
+    },
+    "speed_focus": {
+        "type": "passive",
+        "name": "Speed Focus",
+        "description": "Enhances agility and reaction time.",
+        "effect": {
+            "stat_bonus_flat": { "speed": 1 },
+            "notes": "Example: +1 to speed stat."
+        }
+    },
+    "exploit_weakness": {
+        "type": "passive_or_active_combat",
+        "name": "Exploit Weakness",
+        "description": "Capitalizes on enemy vulnerabilities for increased effectiveness.",
+        "effect": {
+            "crit_chance_bonus": 0.15,
+            "notes": "Example: +15% critical hit chance."
+        }
+    },
+    "first_strike": {
+        "type": "passive_combat_start",
+        "name": "First Strike",
+        "description": "Grants an advantage at the beginning of combat.",
+        "effect": {
+            "guaranteed_first_turn": true,
+            "notes": "Example: Always acts first in combat if conditions met."
+        }
+    },
+    "defensive_actions": {
+        "type": "passive_or_active_combat",
+        "name": "Defensive Actions",
+        "description": "Improves survivability through enhanced defensive maneuvers.",
+        "effect": {
+            "stat_bonus_percent": { "defense": 0.1 },
+            "notes": "Example: +10% to defense stat."
+        }
+    },
+    "mending_form": {
+        "type": "passive_or_active_utility",
+        "name": "Mending Form",
+        "description": "Allows for slow recovery or improved healing.",
+        "effect": {
+            "health_regen_per_turn": 1,
+            "notes": "Example: Regenerates 1 HP per turn (in or out of combat)."
+        }
+    },
+    "stalwart_stance": {
+        "type": "active_combat_stance",
+        "name": "Stalwart Stance",
+        "description": "A defensive posture that greatly increases resilience at the cost of mobility or offense.",
+        "cost": { "action_points": 1 },
+        "effect": {
+            "temporary_stat_bonus": { "defense": 5, "speed": -2 },
+            "duration_turns": 3,
+            "notes": "Example: +5 Defense, -2 Speed for 3 turns."
+        }
+    },
+    "volitile_stat_gain": {
+        "type": "passive_leveling",
+        "name": "Volatile Stat Gain",
+        "description": "Stat increases upon leveling are unpredictable, with one stat receiving a major boost and others minor ones.",
+        "effect": {
+            "randomized_level_up_stats": { "major_boost": 3, "minor_boost": 1, "num_minor_stats": 2 },
+            "notes": "This ability's effect is primarily handled in Entity.accounting(). This entry is for description and identification."
+        }
+    },
+    "slip_the_weave": {
+        "type": "active_combat_or_utility",
+        "name": "Slip the Weave",
+        "description": "A momentary distortion of reality allowing for evasion or repositioning.",
+        "cost": { "mana_or_focus": 5 },
+        "effect": {
+            "evasion_chance_bonus": 0.25,
+            "duration_turns": 1,
+            "notes": "Example: +25% evasion for 1 turn."
+        }
+    },
+    "void_glimpse": {
+        "type": "passive_or_active_utility",
+        "name": "Void Glimpse",
+        "description": "Occasional insights into the unseen, potentially revealing secrets or weaknesses.",
+        "effect": {
+            "reveal_hidden_info_chance": 0.05,
+            "notes": "Example: 5% chance per interaction/area to reveal something hidden. Could also be an active skill."
+        }
+    }
+}

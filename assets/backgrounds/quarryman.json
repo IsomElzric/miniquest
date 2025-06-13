@@ -1,0 +1,16 @@
+{
+    "name": "Quarryman",
+    "description": "Your days were measured by the sun's slow arc across the sky and the steady clink-clink of your pick against the local stone. You spent your life in the settlement's small, dust-choked quarry, chipping away at rock for building materials, paving stones, or maybe just clearing stubborn rubble. You know the weight of a good hammer, the feel of fine grit under your calloused fingers, and the best way to leverage a stubborn block of shale without breaking your back. You've always been more comfortable with the quiet, enduring strength of the earth than with anything complicated, and certainly not with anything that moves too fast or tries to eat you.",
+    "stats": {
+        "attack": 5,
+        "defense": 3,
+        "speed": 1
+    },
+    "details": "Starting Stats:\n  Attack: 5\n  Defense: 4\n  Speed: 2\n\nA Quarryman brings the force of the mountain to bear, striking with heavy, bone-jarring power.",
+    "abilities": ["attack_dominance", "leverage_weakness", "shattering_blow"],
+    "stat_gains_per_level": { "attack": 3, "defense": 1, "speed": 1, "health_per_level_bonus": 5 },
+    "ability_unlocks_at_level": [
+        { "level": 2, "ability": "leverage_weakness" },
+        { "level": 3, "ability": "shattering_blow" }
+    ]
+}

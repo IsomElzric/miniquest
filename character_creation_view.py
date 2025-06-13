@@ -1,19 +1,24 @@
 import logging
 import arcade
+import arcade.color # Explicitly import arcade.color
 # os, sys, and Counter are not used in this file.
 # arcade.gui is used, specifically UIManager, UIInputText, UIAnchorWidget.
 from arcade.gui import UIManager, UIInputText, UIAnchorWidget 
 import textwrap # For wrapping text into lines
 
 # Import constants and other views/modules
-from constants import * 
+from constants import (TOP_BANNER_BACKGROUND_IMAGE, MENU_BUTTON_IMAGE_PATH, PLAYER_INFO_BANNER_HEIGHT,
+                       LEFT_PADDING, CC_BACKGROUND_BUTTON_WIDTH, CC_BACKGROUND_BUTTON_HEIGHT, SCREEN_HEIGHT,
+                       CC_DESC_AREA_Y_START_OFFSET, BUTTON_WIDTH, BUTTON_HEIGHT, SCREEN_WIDTH, MENU_PANEL_WIDTH,
+                       BUTTON_FONT_SIZE, MENU_BUTTON_TEXT_PADDING, CC_DESC_AREA_X, CC_DESC_AREA_WIDTH, # Removed 'arcade' from this import
+                       TEXT_AREA_FONT_SIZE, TEXT_AREA_LINE_HEIGHT, CC_BACKGROUND_BUTTON_SPACING)
 from game_view import GameView
 from scripts.world import World
-
 # For type hinting to resolve circular imports.
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from menu_view import MenuView # This import is only for type checking
+from scripts.builder import Builder # Import Builder
 
 logging.getLogger('arcade').setLevel(logging.INFO)
 
@@ -22,10 +27,15 @@ class CharacterCreationView(arcade.View):
     def __init__(self, previous_view: 'MenuView'): # Use string literal for type hint
         super().__init__()
         self.previous_view = previous_view
-        self.background_options = list(BACKGROUNDS_DATA.keys())
+
+        # Instantiate Builder to load background data
+        self.builder = Builder(message_log=lambda msg: print(f"CCView_Builder: {msg}")) # Simple logger for builder
+        self.backgrounds_data = self.builder.build_backgrounds() # Load from JSONs
+        self.background_options = list(self.backgrounds_data.keys())
+
         self.selected_background_key = None
         self.selected_background_details = ""
-
+        
         self.manager = UIManager()
         self.manager.enable()
         self.name_input_box = None
@@ -185,13 +195,13 @@ class CharacterCreationView(arcade.View):
             char_width_estimate = TEXT_AREA_FONT_SIZE * 0.6 # A common estimate for average char width
             wrap_width_chars = int(CC_DESC_AREA_WIDTH / char_width_estimate) if char_width_estimate > 0 else 50
 
-            wrapped_description = textwrap.wrap(BACKGROUNDS_DATA[self.selected_background_key]["description"], width=wrap_width_chars)
+            wrapped_description = textwrap.wrap(self.backgrounds_data[self.selected_background_key]["description"], width=wrap_width_chars)
             for line in wrapped_description:
                 arcade.draw_text(line, CC_DESC_AREA_X, desc_y, arcade.color.WHITE, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top", width=CC_DESC_AREA_WIDTH)
                 desc_y -= TEXT_AREA_LINE_HEIGHT
             
             desc_y -= TEXT_AREA_LINE_HEIGHT # Extra space
-            wrapped_details = textwrap.wrap(BACKGROUNDS_DATA[self.selected_background_key]["details"], width=wrap_width_chars)
+            wrapped_details = textwrap.wrap(self.backgrounds_data[self.selected_background_key]["details"], width=wrap_width_chars)
             for line in wrapped_details:
                 arcade.draw_text(line, CC_DESC_AREA_X, desc_y, arcade.color.LIGHT_GRAY, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top", width=CC_DESC_AREA_WIDTH)
                 desc_y -= TEXT_AREA_LINE_HEIGHT
@@ -202,16 +212,16 @@ class CharacterCreationView(arcade.View):
             action = clicked[0].properties['action']
             if action.startswith("select_bg_"):
                 self.selected_background_key = action.replace("select_bg_", "")
-                if self.selected_background_key in BACKGROUNDS_DATA: # Ensure key exists
-                    self.selected_background_details = BACKGROUNDS_DATA[self.selected_background_key]["details"]
+                if self.selected_background_key in self.backgrounds_data: # Ensure key exists
+                    self.selected_background_details = self.backgrounds_data[self.selected_background_key]["details"]
                 self._setup_ui() # Refresh UI to update confirm button color
             elif action == "confirm_selection":
                 if self.selected_background_key:
                     character_name = "Adventurer" # Default name since input box is removed
                     print(f"--- Character '{character_name}' with background '{self.selected_background_key}' confirmed! ---")
                     game_world = World()
-                    chosen_stats = BACKGROUNDS_DATA[self.selected_background_key]["stats"]
-                    game_world.create_character(name=character_name, background_stats=chosen_stats)
+                    chosen_background_data = self.backgrounds_data[self.selected_background_key] # Get the full data dict
+                    game_world.create_character(name=character_name, background_data=chosen_background_data) # Pass full data
                     game_view = GameView(game_world)
                     self.window.show_view(game_view)
                 else:

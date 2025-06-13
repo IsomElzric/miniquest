@@ -1,0 +1,16 @@
+{
+    "name": "Waller",
+    "description": "Your hands were mostly occupied with the upkeep of the settlement's humble defenses – mending a cracked foundation, replacing loose stones on the animal pens, or perhaps helping to patch a section of the outer palisade after a particularly rough storm. You know how to mix a solid mortar, the importance of a straight line, and the subtle ways wood rots or stone crumbles. You're a patient, methodical sort, used to working piece by painstaking piece to build something that lasts. The idea of fighting anything larger than a persistent draft coming through a wall is certainly not something you prepared for. A resilient survivor, hardened by adversity and possessing an unyielding will to live. Endurance is your greatest asset.",
+    "stats": {
+        "attack": 3,
+        "defense": 5,
+        "speed": 1
+    },
+    "details": "Starting Stats:\n  Attack: 3\n  Defense: 5\n  Speed: 2\n\nA Waller fortifies, absorbing punishment and protecting those behind them with unyielding resolve.",
+    "abilities": ["defensive_actions", "mending_form", "stalwart_stance"],
+    "stat_gains_per_level": { "attack": 1, "defense": 3, "speed": 1, "health_per_level_bonus": 7 },
+    "ability_unlocks_at_level": [
+        { "level": 2, "ability": "mending_form" },
+        { "level": 3, "ability": "stalwart_stance" }
+    ]
+}

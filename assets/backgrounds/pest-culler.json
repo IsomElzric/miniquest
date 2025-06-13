@@ -1,0 +1,16 @@
+{
+    "name": "Pest-culler",
+    "description": "Life in your settlement, particularly near the edge of the deeper Aethelwood, meant dealing with the constant nuisance of unwanted visitors. Your job, usually a thankless one, was to keep the vermin from gnawing through food stores or nesting in the eaves. You learned how to set a simple snare, where the tunnel-rats often burrowed, and the kind of strange chittering that meant something unusual was getting too close. You're observant and quiet, used to moving through the shadows, but your experience is with scuttling things the size of your hand, not terrors that loom larger than a cart.",
+    "stats": {
+        "attack": 1,
+        "defense": 3,
+        "speed": 5
+    },
+    "details": "Starting Stats:\n  Attack: 4\n  Defense: 2\n  Speed: 5\n\nA Pest-culler strikes with precise, unexpected force, finding crucial weaknesses and exploiting them.",
+    "abilities": ["speed_focus", "exploit_weakness", "first_strike"],
+    "stat_gains_per_level": { "attack": 1, "defense": 1, "speed": 3, "health_per_level_bonus": 5 },
+    "ability_unlocks_at_level": [
+        { "level": 2, "ability": "exploit_weakness" },
+        { "level": 3, "ability": "first_strike" }
+    ]
+}

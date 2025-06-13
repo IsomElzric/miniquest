@@ -43,6 +43,7 @@ class World():
         # its inventory/stats won't be ready immediately.
         # It's better to ensure self.player is fully set up if self.player.update_stats() is called early.
         self.enemy_list = self.builder.build_enemies()
+        self.abilities_data = self.builder.build_abilities_data() # Load abilities definitions
         self.grimoire_entries = self.builder.build_grimoire_entries() # Load grimoire entries
         self.all_items = self.builder.build_items()
         self.player.inventory.set_items(self.all_items)
@@ -86,13 +87,21 @@ class World():
         self.message_log.clear() # Clear the internal log after retrieval
         return messages
 
-    def create_character(self, name="Nameless Adventurer", background_stats=None):
-        # Builder.create_character now sets default player properties
-        self.builder.create_character(name=name, background_stats=background_stats)
-        self.player = self.builder.get_player()
+    def create_character(self, name="Nameless Adventurer", background_data=None):
+        """
+        Creates the player character using the Builder and selected background data.
+        background_data is the full dictionary loaded from the background's JSON file.
+        """
+        # Builder.create_character now returns a new player entity
+        self.player = self.builder.create_character(name=name, background_data=background_data)
         self.player.is_player = True
+        self.player.message_log_func = self.append_message # Assign World's logger
+        self.player.world_abilities_data = self.abilities_data # Give player access to all ability definitions
+
         self.append_message(f"You have created a new character: {self.player.name}!")
         self.append_message(f"Current Stats: Lvl {self.player.level}, HP {self.player.current_health}/{self.player.max_health}, Atk {self.player.attack}, Def {self.player.defense}, Spd {self.player.speed}")
+        # Log initial abilities
+        self.append_message(f"Initial Abilities: {', '.join(sorted(list(self.player.abilities))) if self.player.abilities else 'None'}")
         # print(f"DEBUG: Player created. Player name: {self.player.name}")
 
     def set_location(self, value):
@@ -623,6 +632,7 @@ class World():
         if player_data:
             world.player = Entity.from_dict(player_data, all_items_lookup_map, world.append_message)
             world.player.is_player = True
+            world.player.world_abilities_data = world.abilities_data # Also set for loaded player
         else:
             world.create_character() 
             if temp_message_log_func: temp_message_log_func("Warning: Player data not found. Created new character.")

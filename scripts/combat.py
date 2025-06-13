@@ -13,7 +13,7 @@ class Combat():
         try:
             # Note: speed_mod is already included in fighter.speed @property calculation
             # if fighter.speed > self.combatant_list[0].speed + self.combatant_list[0].speed_mod:
-            if fighter.speed > self.combatant_list[0].speed: # Use property directly
+            if fighter.speed + fighter.speed_mod > self.combatant_list[0].speed + self.combatant_list[0].speed_mod: # Use property directly
                 self.combatant_list.insert(0, fighter)
             else:
                 self.combatant_list.append(fighter)
@@ -24,9 +24,9 @@ class Combat():
         # NEW: Append to message_log instead of print
         self.message_log('{} acts first with base speed {}! {} acts second with base speed {}!'.format( # Changed from .append
             self.combatant_list[0].name,
-            self.combatant_list[0].speed,
+            self.combatant_list[0].speed + self.combatant_list[0].speed_mod,
             self.combatant_list[1].name,
-            self.combatant_list[1].speed))
+            self.combatant_list[1].speed + self.combatant_list[1].speed_mod))
         
     # The start_combat loop is now managed by the World class through discrete actions.
     # def start_combat(self):

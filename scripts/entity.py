@@ -2,7 +2,9 @@
 from scripts.inventory import Inventory
 from random import Random
 from abc import ABC, abstractmethod
-import math
+import random # For volatile stat gain
+import math # For rounding functions
+from typing import Callable # Import Callable for more specific type hinting
 
 
 class Entity():
@@ -30,6 +32,13 @@ class Entity():
         self._finesse = 0
 
         self.inventory = Inventory()
+
+        # New attributes for abilities and background-specific progression
+        self.abilities = set()
+        self.background_stat_gains = {}  # e.g., {"attack": 0.5, "health_per_level_bonus": 2}
+        self.background_ability_unlocks = []  # e.g., [{"level": 3, "ability": "some_new_skill"}]
+        self.message_log_func: Callable[[str], None] | None = None # To be set by World for the player entity
+        self.world_abilities_data = {} # To store reference to all defined abilities
     
     @property
     def name(self):
@@ -184,6 +193,24 @@ class Entity():
         self.health_base = 5 * self.level
         self.max_health = self.health_base + self.round_up(self.defense / 2)
 
+        # Reset mods before applying from abilities and items
+        self.attack_mod = 0
+        self.defense_mod = 0
+        self.speed_mod = 0
+        # self.damage, self.mitigation, self.finesse are base item stats, not mods in the same way.
+
+        # Apply passive ability stat bonuses
+        for ability_key in self.abilities:
+            if ability_key in self.world_abilities_data:
+                ability_def = self.world_abilities_data[ability_key]
+                if ability_def.get("type") == "passive" and "effect" in ability_def:
+                    effect = ability_def["effect"]
+                    if "stat_bonus_flat" in effect:
+                        for stat, bonus in effect["stat_bonus_flat"].items():
+                            if stat == "attack": self.attack_mod += bonus
+                            elif stat == "defense": self.defense_mod += bonus
+                            elif stat == "speed": self.speed_mod += bonus
+
         total_stats = self.inventory.get_stat_modifiers()
         for key, value in total_stats.items():
             if key == 'damage':
@@ -192,12 +219,14 @@ class Entity():
                 self.mitigation = value
             elif key == 'finesse':
                 self.finesse = value
-            elif key == 'attack':
+            # Item stat modifiers are added to existing mods from abilities
+            elif key == 'attack': 
                 self.attack_mod = value
             elif key == 'defense':
                 self.defense_mod = value
             elif key == 'speed':
                 self.speed_mod = value
+        
 
         self.accounting()
 
@@ -216,8 +245,68 @@ class Entity():
     def accounting(self):
         if self.inventory.income >= self.target:
             self.level += 1
-            self.target *= 2
+            self.target *= 2 # Increase XP target for next level
 
+            # Stat gains logic
+            if "volatile_stat_gain" in self.abilities:
+                stats_pool = ["attack", "defense", "speed"]
+                major_stat = random.choice(stats_pool)
+                
+                gains_messages = []
+                for stat_name in stats_pool:
+                    gain = 3 if stat_name == major_stat else 1
+                    if stat_name == "attack":
+                        self._attack += gain
+                    elif stat_name == "defense":
+                        self._defense += gain
+                    elif stat_name == "speed":
+                        self._speed += gain
+                    gains_messages.append(f"{stat_name.capitalize()}: +{gain}")
+                
+                if self.is_player and self.message_log_func:
+                    self.message_log_func(f"Volatile energies surge! {major_stat.capitalize()} increased by 3, others by 1.")
+            
+            elif self.background_stat_gains: # Check if the dict is not empty (standard gains)
+                atk_gain = self.round_up(self.background_stat_gains.get("attack", 0.2))
+                def_gain = self.round_up(self.background_stat_gains.get("defense", 0.2))
+                spd_gain = self.round_up(self.background_stat_gains.get("speed", 0.2))
+                self._attack += atk_gain
+                self._defense += def_gain
+                self._speed += spd_gain
+                if self.is_player and self.message_log_func:
+                    self.message_log_func(f"Gained stats: Atk +{atk_gain}, Def +{def_gain}, Spd +{spd_gain}.")
+            else:
+                # Fallback default gains if no background data or volatile ability
+                self._attack += 1 
+                self._defense += 1
+                self._speed += 1
+                if self.is_player and self.message_log_func:
+                    self.message_log_func("Gained stats: Atk +1, Def +1, Spd +1.")
+
+            # Health bonus (can be independent of volatile stat gain for primary stats)
+            if self.background_stat_gains: # Check if dict is not empty
+                health_bonus = self.background_stat_gains.get("health_per_level_bonus", 1)
+                self.health_base += health_bonus
+                if self.is_player and self.message_log_func:
+                    self.message_log_func(f"Base health increased by {health_bonus}.")
+            else: # Fallback
+                self.health_base += 1 
+                if self.is_player and self.message_log_func:
+                    self.message_log_func("Base health increased by 1.")
+
+            # Unlock abilities based on level
+            if self.background_ability_unlocks:
+                for unlock_info in self.background_ability_unlocks:
+                    if unlock_info["level"] == self.level:
+                        self.abilities.add(unlock_info["ability"])
+                        if self.is_player and self.message_log_func:
+                            # TODO: Consider looking up a friendly name for the ability key
+                            self.message_log_func(f"New ability unlocked: {unlock_info['ability']}!")
+            
+            self.update_stats() # Recalculate derived stats like max_health
+            self.reset_health() # Fully heal on level up
+            if self.is_player and self.message_log_func:
+                 self.message_log_func(f"You have reached level {self.level}!")
     def scaling(self):
         if not self.is_player:
             self.attack *= self.level
@@ -266,12 +355,16 @@ class Entity():
             "_finesse": self._finesse,
             "is_player": self.is_player,
             "inventory": self.inventory.to_dict(),
+            "abilities": list(self.abilities), # Convert set to list for JSON
+            # background_stat_gains & background_ability_unlocks are part of the background, not saved per entity if re-applied on load
+            "background_stat_gains": self.background_stat_gains,
+            "background_ability_unlocks": self.background_ability_unlocks,
         }
         return entity_data
 
     @classmethod
     def from_dict(cls, data, all_items_lookup_map, message_log_func):
-        instance = cls()
+        instance = cls() # This will call __init__
         instance.name = data.get("name", "Loaded Entity")
         instance.level = data.get("level", 1)
         instance.target = data.get("target", 20)
@@ -290,6 +383,12 @@ class Entity():
         inventory_data = data.get("inventory")
         if inventory_data:
             instance.inventory.from_dict(inventory_data, all_items_lookup_map, message_log_func)
+
+        instance.abilities = set(data.get("abilities", [])) # Convert list back to set
+        instance.background_stat_gains = data.get("background_stat_gains", {})
+        instance.background_ability_unlocks = data.get("background_ability_unlocks", [])
+        # world_abilities_data will be set by World after loading the entity
+
 
         instance.update_stats() # Recalculate derived stats like max_health
         instance.max_health = data.get("max_health", instance.max_health) # Restore saved max_health

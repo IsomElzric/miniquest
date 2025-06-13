@@ -1,11 +1,19 @@
 import logging
 import arcade
+import arcade.color # Explicitly import arcade.color
 # os, sys, Counter, arcade.gui, and textwrap are not directly used in this file.
 # Path constants are handled by constants.py
 # UI elements are not directly created here using arcade.gui
 
 # Import constants and other views/modules
-from constants import *
+from constants import (BACKGROUND_IMAGE, TOP_BANNER_BACKGROUND_IMAGE, MENU_BUTTON_IMAGE_PATH,
+                       MENU_VIEW_RIGHT_PANEL_BACKGROUND_IMAGE, SCREEN_HEIGHT, PLAYER_INFO_BANNER_HEIGHT,
+                       GAME_AREA_WIDTH, RIGHT_MENU_X_START, MENU_PANEL_WIDTH, TOP_PADDING,
+                       MENU_BUTTON_HEIGHT, MENU_BUTTON_VERTICAL_SPACING, MENU_BUTTON_TARGET_WIDTH, # Keep existing
+                       MENU_BUTTON_TEXT_COLOR, MENU_BUTTON_TEXT_PADDING, SCREEN_WIDTH, # Keep existing
+                       MENU_ACTIONS_TITLE_FONT_SIZE, MENU_PADDING_BELOW_TITLE # Add these two
+                       # arcade.color is used directly for some fallbacks/title, not from constants module
+                      )
 from character_creation_view import CharacterCreationView
 from grimoire_view import GrimoireView
 from game_view import GameView

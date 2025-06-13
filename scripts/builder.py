@@ -1,5 +1,6 @@
 # scripts/builder.py
 import os
+import json # For loading background JSON files
 from scripts.location import Location
 from scripts.entity import Entity
 from scripts.item import Item
@@ -17,6 +18,8 @@ LOCATION_PATH = os.path.join(ASSETS_DIR, 'locations')
 ENEMY_PATH = os.path.join(ASSETS_DIR, 'enemies')
 ITEM_PATH = os.path.join(ASSETS_DIR, 'items')
 GRIMOIRE_PATH = os.path.join(ASSETS_DIR, 'grimoire_entries') # New path for grimoire entries
+BACKGROUND_PATH = os.path.join(ASSETS_DIR, 'backgrounds') # Path for character backgrounds
+GAME_DATA_PATH = os.path.join(ASSETS_DIR, 'game_data') # Path for general game data like abilities
 
 PLAYER_ATTACK = 3
 PLAYER_DEFENSE = 3
@@ -24,31 +27,45 @@ PLAYER_SPEED = 3
 
 class Builder():
     def __init__(self, message_log) -> None:  # Accept message_log here
-        self.player = Entity()
+        # Builder will create a player entity on demand via create_character
+        # It doesn't need to hold its own self.player instance persistently across calls.
+        # self.player = Entity() # Removed
         self.message_log = message_log # Store message_log
 
-    def create_character(self, name="Nameless Adventurer", background_stats=None):
+    def create_character(self, name="Nameless Adventurer", background_data=None):
+        """
+        Creates and configures a new player Entity based on the provided background data.
+        This method now returns the created player entity.
+        """
         # This method is now non-interactive for GUI compatibility.
         # It sets up a default character. The GUI will handle input.
-        self.player.name = name
-        
-        if background_stats:
-            self.player.attack = background_stats.get("attack", PLAYER_ATTACK)
-            self.player.defense = background_stats.get("defense", PLAYER_DEFENSE)
-            self.player.speed = background_stats.get("speed", PLAYER_SPEED)
+        player = Entity() # Create a new player entity
+        player.name = name
+        # player.message_log_func = self.message_log # World will set this
+
+        if background_data:
+            initial_stats = background_data.get("stats", {})
+            player.attack = initial_stats.get("attack", PLAYER_ATTACK)
+            player.defense = initial_stats.get("defense", PLAYER_DEFENSE)
+            player.speed = initial_stats.get("speed", PLAYER_SPEED)
+
+            player.abilities.update(background_data.get("abilities", []))
+            player.background_stat_gains = background_data.get("stat_gains_per_level", {})
+            player.background_ability_unlocks = background_data.get("ability_unlocks_at_level", [])
         else:
             # Default stats for a balanced start if no background_stats provided
-            self.player.attack = PLAYER_ATTACK
-            self.player.defense = PLAYER_DEFENSE
-            self.player.speed = PLAYER_SPEED
+            player.attack = PLAYER_ATTACK
+            player.defense = PLAYER_DEFENSE
+            player.speed = PLAYER_SPEED
 
-        self.player.update_stats()
-        self.player.reset_health()
-        # Ensure print_entity uses the message_log
-        self.player.print_entity(self.message_log)
+        player.update_stats()
+        player.reset_health()
+        return player # Return the configured player entity
 
-    def get_player(self):
-        return self.player
+    # def get_player(self): # This method is likely no longer needed as create_character returns the player.
+    #     # If it were to be kept, it would need to return a specific player instance,
+    #     # but Builder's role is to construct, not to manage the active player.
+    #     pass
 
     def build_areas(self):
         area_list = []
@@ -245,3 +262,52 @@ class Builder():
                         print(f"Error reading grimoire file {filepath}: {e}")
         
         return grimoire_entries_list
+
+    def build_backgrounds(self):
+        """
+        Builds a dictionary of character backgrounds from .json files.
+        Each key is the background name (from filename), value is the loaded data.
+        """
+        backgrounds_data = {}
+        if not os.path.exists(BACKGROUND_PATH):
+            self.message_log(f"Warning: Backgrounds directory not found at {BACKGROUND_PATH}")
+            print(f"Warning: Backgrounds directory not found at {BACKGROUND_PATH}")
+            return backgrounds_data
+
+        for filename in os.listdir(BACKGROUND_PATH):
+            if filename.endswith(".json"):
+                filepath = os.path.join(BACKGROUND_PATH, filename)
+                try:
+                    with open(filepath, "r") as file:
+                        data = json.load(file)
+                        # Use the "name" field from JSON if available, otherwise derive from filename
+                        background_key = data.get("name", os.path.splitext(filename)[0].capitalize())
+                        backgrounds_data[background_key] = data
+                except Exception as e:
+                    self.message_log(f"Error reading background file {filepath}: {e}")
+                    print(f"Error reading background file {filepath}: {e}")
+        
+        return backgrounds_data
+
+    def build_abilities_data(self):
+        """
+        Loads ability definitions from abilities_data.json.
+        Returns a dictionary where keys are ability IDs and values are their data.
+        """
+        abilities_data = {}
+        abilities_filepath = os.path.join(GAME_DATA_PATH, 'abilities_data.json')
+
+        if not os.path.exists(abilities_filepath):
+            self.message_log(f"Warning: Abilities data file not found at {abilities_filepath}")
+            print(f"Warning: Abilities data file not found at {abilities_filepath}")
+            return abilities_data
+        
+        try:
+            with open(abilities_filepath, "r") as file:
+                abilities_data = json.load(file)
+        except Exception as e:
+            self.message_log(f"Error reading abilities data file {abilities_filepath}: {e}")
+            print(f"Error reading abilities data file {abilities_filepath}: {e}")
+            return {} # Return empty dict on error
+            
+        return abilities_data
