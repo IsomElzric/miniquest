@@ -33,12 +33,18 @@ class CharacterCreationView(arcade.View):
         self.backgrounds_data = self.builder.build_backgrounds() # Load from JSONs
         self.background_options = list(self.backgrounds_data.keys())
 
-        self.selected_background_key = None
-        self.selected_background_details = ""
+        self.selected_background_key = None 
+        # self.selected_background_details is no longer needed as a separate attribute,
+        # it will be drawn directly from self.backgrounds_data[self.selected_background_key]["details"]
         
         self.manager = UIManager()
         self.manager.enable()
         self.name_input_box = None
+
+        # Scrolling for description panel
+        self.desc_scroll_offset_y = 0.0
+        self.desc_content_total_height = 0.0
+        self.desc_area_view_rect = None # Will be defined in on_draw or _setup_ui
 
         # Load top banner background (same as MenuView)
         self.top_banner_texture = None
@@ -182,29 +188,77 @@ class CharacterCreationView(arcade.View):
         # Draw selected background description and stats
         if self.selected_background_key:
             # Adjust starting Y for description to be below the name input box
-            # Description panel starts at its own Y offset, independent of name input now
-            desc_y = SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT - CC_DESC_AREA_Y_START_OFFSET
+            # Define the viewport for the description area
+            desc_panel_top_y = SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT - CC_DESC_AREA_Y_START_OFFSET
+            desc_panel_bottom_y = BUTTON_HEIGHT * 3.5 # Approximate bottom, above confirm/back buttons
+            desc_panel_height = desc_panel_top_y - desc_panel_bottom_y
+            self.desc_area_view_rect = (CC_DESC_AREA_X, desc_panel_bottom_y, CC_DESC_AREA_WIDTH, desc_panel_height)
 
-            arcade.draw_text(f"Background: {self.selected_background_key}",
-                             CC_DESC_AREA_X, desc_y, arcade.color.GOLD, font_size=18, bold=True, anchor_y="top",
-                             width=CC_DESC_AREA_WIDTH)
-            desc_y -= 30
-            
             # Wrap and draw description
             # Adjusted width calculation for text wrapping to be more robust
             char_width_estimate = TEXT_AREA_FONT_SIZE * 0.6 # A common estimate for average char width
             wrap_width_chars = int(CC_DESC_AREA_WIDTH / char_width_estimate) if char_width_estimate > 0 else 50
 
-            wrapped_description = textwrap.wrap(self.backgrounds_data[self.selected_background_key]["description"], width=wrap_width_chars)
-            for line in wrapped_description:
-                arcade.draw_text(line, CC_DESC_AREA_X, desc_y, arcade.color.WHITE, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top", width=CC_DESC_AREA_WIDTH)
-                desc_y -= TEXT_AREA_LINE_HEIGHT
+            # --- Reordered: Draw Details (Stats) First ---
+            details_text = self.backgrounds_data[self.selected_background_key].get("details", "No details available.")
+            wrapped_details = textwrap.wrap(details_text, width=wrap_width_chars)
             
-            desc_y -= TEXT_AREA_LINE_HEIGHT # Extra space
-            wrapped_details = textwrap.wrap(self.backgrounds_data[self.selected_background_key]["details"], width=wrap_width_chars)
+            # Calculate total content height for scrolling
+            temp_total_height = 30 # Initial space for title
             for line in wrapped_details:
-                arcade.draw_text(line, CC_DESC_AREA_X, desc_y, arcade.color.LIGHT_GRAY, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top", width=CC_DESC_AREA_WIDTH)
-                desc_y -= TEXT_AREA_LINE_HEIGHT
+                temp_total_height += TEXT_AREA_LINE_HEIGHT
+            temp_total_height += TEXT_AREA_LINE_HEIGHT # Extra space after details
+            
+            description_text = self.backgrounds_data[self.selected_background_key].get("description", "No description.")
+            wrapped_description = textwrap.wrap(description_text, width=wrap_width_chars)
+            for line in wrapped_description:
+                temp_total_height += TEXT_AREA_LINE_HEIGHT
+            self.desc_content_total_height = temp_total_height
+
+            # --- DEBUG PRINT 1 (Before Clamp) ---
+            # print(f"CC OnDraw Before Clamp: offset={self.desc_scroll_offset_y:.2f}, content_h={self.desc_content_total_height:.2f}, view_h={self.desc_area_view_rect[3]:.2f}")
+
+            # Clamp scroll offset
+            max_scroll = max(0, self.desc_content_total_height - self.desc_area_view_rect[3])
+            self.desc_scroll_offset_y = arcade.clamp(self.desc_scroll_offset_y, 0, max_scroll)
+            # --- DEBUG PRINT 2 (After Clamp) ---
+            # print(f"CC OnDraw After Clamp: offset={self.desc_scroll_offset_y:.2f}, max_scroll={max_scroll:.2f}")
+
+            # Update draw_y based on clamped scroll offset
+            # This is the Y where the title *would* start if drawn
+            title_start_y = desc_panel_top_y + self.desc_scroll_offset_y
+            title_block_height = 30 # The space the title and its bottom margin occupy
+
+            # Conditionally draw the header
+            # Hide if scrolled down by more than roughly one line height
+            # Show if offset is 0 (or very close to it)
+            # The threshold 1.5 * TEXT_AREA_LINE_HEIGHT is approx 33.
+            if self.desc_scroll_offset_y < (1.5 * TEXT_AREA_LINE_HEIGHT):
+                arcade.draw_text(f"Background: {self.selected_background_key}",
+                                 CC_DESC_AREA_X, title_start_y, arcade.color.GOLD, font_size=18, bold=True, anchor_y="top",
+                                 width=CC_DESC_AREA_WIDTH)
+            
+            # current_draw_y for the details should start AFTER the space reserved for the title
+            current_draw_y = title_start_y - title_block_height
+
+            # Draw Details (Stats)
+            for line_num, line in enumerate(wrapped_details):
+                # Manual clipping: only draw if line is within the visible rect
+                line_top_y = current_draw_y
+                line_bottom_y = current_draw_y - TEXT_AREA_LINE_HEIGHT
+                if line_bottom_y < self.desc_area_view_rect[1] + self.desc_area_view_rect[3] and line_top_y > self.desc_area_view_rect[1]:
+                    arcade.draw_text(line, CC_DESC_AREA_X, current_draw_y, arcade.color.LIGHT_GRAY, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top", width=CC_DESC_AREA_WIDTH)
+                current_draw_y -= TEXT_AREA_LINE_HEIGHT
+            
+            current_draw_y -= TEXT_AREA_LINE_HEIGHT # Extra space after details
+
+            # Draw Description
+            for line_num, line in enumerate(wrapped_description):
+                line_top_y = current_draw_y
+                line_bottom_y = current_draw_y - TEXT_AREA_LINE_HEIGHT
+                if line_bottom_y < self.desc_area_view_rect[1] + self.desc_area_view_rect[3] and line_top_y > self.desc_area_view_rect[1]:
+                    arcade.draw_text(line, CC_DESC_AREA_X, current_draw_y, arcade.color.WHITE, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top", width=CC_DESC_AREA_WIDTH)
+                current_draw_y -= TEXT_AREA_LINE_HEIGHT
 
     def on_mouse_press(self, x: float, y: float, button: int, modifiers: int):
         clicked = arcade.get_sprites_at_point((x, y), self.ui_elements)
@@ -212,8 +266,7 @@ class CharacterCreationView(arcade.View):
             action = clicked[0].properties['action']
             if action.startswith("select_bg_"):
                 self.selected_background_key = action.replace("select_bg_", "")
-                if self.selected_background_key in self.backgrounds_data: # Ensure key exists
-                    self.selected_background_details = self.backgrounds_data[self.selected_background_key]["details"]
+                self.desc_scroll_offset_y = 0 # Reset scroll on new selection
                 self._setup_ui() # Refresh UI to update confirm button color
             elif action == "confirm_selection":
                 if self.selected_background_key:
@@ -229,6 +282,19 @@ class CharacterCreationView(arcade.View):
             elif action == "back_to_menu":
                 self.manager.disable() # Disable UI manager when leaving view
                 self.window.show_view(self.previous_view)
+
+    def on_mouse_scroll(self, x: int, y: int, scroll_x: int, scroll_y: int):
+        if self.desc_area_view_rect and self.selected_background_key:
+            rect_x, rect_y, rect_width, rect_height = self.desc_area_view_rect
+            # Check if mouse is over the description panel
+            if rect_x <= x <= rect_x + rect_width and \
+               rect_y <= y <= rect_y + rect_height:
+                
+                self.desc_scroll_offset_y -= scroll_y * TEXT_AREA_LINE_HEIGHT * 1.5 # scroll_speed_multiplier
+
+                # --- DEBUG PRINT 3 (In MouseScroll) ---
+                # print(f"CC MouseScroll: scroll_y_input={scroll_y}, offset_now={self.desc_scroll_offset_y:.2f}")
+
 
     def on_hide_view(self):
         self.manager.disable() # Important to disable UIManager
