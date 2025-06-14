@@ -1,9 +1,8 @@
 import logging
 import arcade
+import os
 import arcade.color # Explicitly import arcade.color
-# os, sys, and Counter are not used in this file.
-# arcade.gui is used, specifically UIManager, UIInputText, UIAnchorWidget.
-from arcade.gui import UIManager, UIInputText, UIAnchorWidget 
+from arcade.gui import UIManager # UIInputText, UIAnchorWidget 
 import textwrap # For wrapping text into lines
 
 # Import constants and other views/modules
@@ -15,10 +14,7 @@ from constants import (TOP_BANNER_BACKGROUND_IMAGE, MENU_BUTTON_IMAGE_PATH, PLAY
                        CC_CHAR_ART_Y_START_OFFSET, CC_CHAR_ART_BOTTOM_PADDING, CC_CHAR_ART_WIDTH, # Character art constants
                        BUTTON_FONT_SIZE, MENU_BUTTON_TEXT_PADDING, CC_DESC_AREA_X, CC_DESC_AREA_WIDTH, # Removed 'arcade' from this import
                        TEXT_AREA_FONT_SIZE, TEXT_AREA_LINE_HEIGHT, CC_BACKGROUND_BUTTON_SPACING)
-from game_view import GameView
-from scripts.world import World
-# For type hinting to resolve circular imports.
-import os # Import the os module
+
 from typing import TYPE_CHECKING # Keep TYPE_CHECKING for MenuView hint
 if TYPE_CHECKING: # MenuView is only for type hinting
     from menu_view import MenuView # This import is only for type checking
@@ -39,14 +35,9 @@ class CharacterCreationView(arcade.View):
         self.background_options = list(self.backgrounds_data.keys())
 
         self.selected_background_key = None 
-        # self.selected_background_details is no longer needed as a separate attribute,
-        # it will be drawn directly from self.backgrounds_data[self.selected_background_key]["details"]
-        
-        # self.all_abilities_info = self.builder.build_abilities_data() # Not needed if not displaying abilities
 
         self.manager = UIManager()
         self.manager.enable()
-        self.name_input_box = None
 
         # Scrolling for description panel
         self.desc_scroll_offset_y = 0.0
@@ -102,37 +93,6 @@ class CharacterCreationView(arcade.View):
     def _setup_ui(self):
         self.ui_elements.clear()
         self.manager.clear() # Clear existing UI manager elements
-
-        # Name Input Box (Above background selection buttons, or in the description panel)
-        # --- Temporarily removing name input box ---
-        # name_input_style = {
-        #     "font_color": arcade.color.BLACK,      # Color of the default text "Adventurer" if not focused
-        #     "bg_color": arcade.color.YELLOW_ORANGE, # A very visible background color
-        #     "border_color": arcade.color.RED_DEVIL,   # A very visible border color
-        #     "border_width": 2,
-        # }
-        # Note: The actual editable text color and font_size are set by UIInputText's own parameters.
-
-        # self.name_input_box = UIInputText( # Corrected usage if UIInputText is directly imported
-        #     width=CC_NAME_INPUT_WIDTH, 
-        #     height=CC_NAME_INPUT_HEIGHT, # Use the full defined height
-        #     font_size=18, # Font size for the text you type
-        #     text="Adventurer", # Default text
-        #     text_color=arcade.color.BLACK, # Color for the text you type
-        #     style=name_input_style # Apply the custom style
-        # )
-
-
-        # Anchor the UIInputText directly
-        # name_input_anchor = UIAnchorWidget(
-        #     child=self.name_input_box, # Anchor the input box directly
-        #     anchor_x="center_x",  # Align child's center_x to the anchor's x.
-        #     anchor_y="top",       # Align child's top to the anchor's y.
-        #     # Position the anchor widget itself.
-        #     x=LEFT_PADDING + CC_BACKGROUND_BUTTON_WIDTH / 2,  # Centered in the left button panel area
-        #     y=SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT - CC_DESC_AREA_Y_START_OFFSET  # This will be the child's top.
-        # )
-        # self.manager.add(name_input_anchor)
 
         # Background selection buttons (left panel)
         # Move buttons to the top of the panel
@@ -217,10 +177,6 @@ class CharacterCreationView(arcade.View):
 
         # Draw Description Panel (Right)
         # This panel covers the area from CC_DESC_AREA_X to GAME_AREA_WIDTH
-            self._draw_selected_character_art()
-
-        # Draw Description Panel (Right)
-        # This panel covers the area from CC_DESC_AREA_X to GAME_AREA_WIDTH
         desc_panel_actual_width = GAME_AREA_WIDTH - CC_DESC_AREA_X
         desc_panel_center_x = CC_DESC_AREA_X + desc_panel_actual_width / 2
         desc_panel_center_y = (SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT) / 2
@@ -235,8 +191,6 @@ class CharacterCreationView(arcade.View):
                 height=desc_panel_height,
                 texture=self.description_panel_texture
             )
-        # else: # Optional: Fallback if description_panel_texture is missing, could draw a solid color
-            # arcade.draw_rectangle_filled(desc_panel_center_x, desc_panel_center_y, desc_panel_actual_width, desc_panel_height, arcade.color.DARK_GRAY)
 
         # Then, draw the translucent dark overlay on top of the description panel's background
         arcade.draw_rectangle_filled(
@@ -337,48 +291,6 @@ class CharacterCreationView(arcade.View):
             stat_summary_lines.append(f"  Attack: {stats.get('attack', 'N/A')}")
             stat_summary_lines.append(f"  Defense: {stats.get('defense', 'N/A')}")
             stat_summary_lines.append(f"  Speed: {stats.get('speed', 'N/A')}")
-            # stat_summary_lines.append("") # Spacer - Removed for now
-
-            # # Abilities - Removed for now
-            # abilities = selected_bg_data.get("abilities", [])
-            # if abilities:
-            #     stat_summary_lines.append("Initial Abilities:")
-            #     for ability_id in abilities:
-            #         ability_id_formatted = ability_id.replace('_', ' ').capitalize()
-            #         ability_name_to_display = ability_id_formatted
-            #         # if self.all_abilities_info and ability_id in self.all_abilities_info: # self.all_abilities_info is commented out
-            #         #     ability_name_to_display = self.all_abilities_info[ability_id].get("name", ability_id_formatted)
-            #         stat_summary_lines.append(f"  - {ability_name_to_display}")
-            # else:
-            #     stat_summary_lines.append("Initial Abilities: None")
-            # stat_summary_lines.append("")
-
-            # # Stat Gains Per Level - Removed for now
-            # stat_gains = selected_bg_data.get("stat_gains_per_level", {})
-            # if stat_gains:
-            #     stat_summary_lines.append("Stat Gains Per Level:")
-            #     for stat, gain in stat_gains.items():
-            #         stat_summary_lines.append(f"  {stat.capitalize()}: +{gain}")
-            # else:
-            #     stat_summary_lines.append("Stat Gains Per Level: Default")
-            # stat_summary_lines.append("")
-
-            # # Ability Unlocks At Level - Removed for now
-            # ability_unlocks = selected_bg_data.get("ability_unlocks_at_level", [])
-            # if ability_unlocks:
-            #     stat_summary_lines.append("Ability Unlocks:")
-            #     sorted_unlocks = sorted(ability_unlocks, key=lambda x: x.get("level", 0))
-            #     for unlock in sorted_unlocks:
-            #         level = unlock.get("level")
-            #         ability_id = unlock.get("ability")
-            #         if level is not None and ability_id:
-            #             ability_id_formatted = ability_id.replace('_', ' ').capitalize()
-            #             ability_name_to_display = ability_id_formatted
-            #             # if self.all_abilities_info and ability_id in self.all_abilities_info: # self.all_abilities_info is commented out
-            #             #     ability_name_to_display = self.all_abilities_info[ability_id].get("name", ability_id_formatted)
-            #             stat_summary_lines.append(f"  Level {level}: {ability_name_to_display}")
-            # else:
-            #     stat_summary_lines.append("Ability Unlocks: None")
             
             # Calculate total content height for scrolling
             temp_total_height = 30 # Initial space for title
@@ -392,15 +304,10 @@ class CharacterCreationView(arcade.View):
                 temp_total_height += TEXT_AREA_LINE_HEIGHT
             self.desc_content_total_height = temp_total_height
 
-            # --- DEBUG PRINT 1 (Before Clamp) ---
-            # print(f"CC OnDraw Before Clamp: offset={self.desc_scroll_offset_y:.2f}, content_h={self.desc_content_total_height:.2f}, view_h={self.desc_area_view_rect[3]:.2f}")
-
             # Clamp scroll offset
             max_scroll = max(0, self.desc_content_total_height - self.desc_area_view_rect[3])
             self.desc_scroll_offset_y = arcade.clamp(self.desc_scroll_offset_y, 0, max_scroll)
-            # --- DEBUG PRINT 2 (After Clamp) ---
-            # print(f"CC OnDraw After Clamp: offset={self.desc_scroll_offset_y:.2f}, max_scroll={max_scroll:.2f}")
-
+            
             # Update draw_y based on clamped scroll offset
             # This is the Y where the title *would* start if drawn
             title_start_y = desc_panel_top_y + self.desc_scroll_offset_y
@@ -444,15 +351,15 @@ class CharacterCreationView(arcade.View):
             if action.startswith("select_bg_"):
                 self.selected_background_key = action.replace("select_bg_", "")
                 self.desc_scroll_offset_y = 0 # Reset scroll on new selection
-                # Load character art
+                # Load character artoptional: for debugging
                 art_filename = self.selected_background_key.lower().replace(" ", "_") + ".png"
                 art_path = os.path.join(CHARACTER_ART_PATH, art_filename)
                 try:
                     self.selected_character_art_texture = arcade.load_texture(art_path)
-                    print(f"Loaded character art: {art_path}")
+                    # print(f"Loaded character art: {art_path}")
                 except FileNotFoundError:
                     self.selected_character_art_texture = None # Or a placeholder
-                    print(f"Character art not found: {art_path}")
+                    # print(f"Character art not found: {art_path}")
                 
                 self._setup_ui() # Refresh UI to update confirm button color
             elif action == "confirm_selection":
@@ -475,10 +382,6 @@ class CharacterCreationView(arcade.View):
                rect_y <= y <= rect_y + rect_height:
                 
                 self.desc_scroll_offset_y -= scroll_y * TEXT_AREA_LINE_HEIGHT * 1.5 # scroll_speed_multiplier
-
-                # --- DEBUG PRINT 3 (In MouseScroll) ---
-                # print(f"CC MouseScroll: scroll_y_input={scroll_y}, offset_now={self.desc_scroll_offset_y:.2f}")
-
 
     def on_hide_view(self):
         self.manager.disable() # Important to disable UIManager

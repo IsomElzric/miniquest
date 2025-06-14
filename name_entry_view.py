@@ -98,7 +98,7 @@ class NameEntryView(arcade.View):
         arcade.set_background_color(arcade.color.DARK_SLATE_GRAY)
         self.manager.enable()
         if self.name_input_box:
-            self.manager.focused_widget = self.name_input_box # type: ignore # Correct way to set focus
+            self.manager.focused_widget = self.name_input_box # type: ignore
 
     def on_hide_view(self):
         self.manager.disable()
@@ -149,15 +149,15 @@ class NameEntryView(arcade.View):
 
     def on_key_press(self, symbol: int, modifiers: int):
         self.manager.on_key_press(symbol, modifiers)
-        if symbol == arcade.key.ENTER:
-            if self.name_input_box and self.manager.focused_widget is self.name_input_box:
+        if symbol == arcade.key.ENTER: # type: ignore
+            if self.name_input_box and self.manager.focused_widget is self.name_input_box: # type: ignore
                 character_name = self.name_input_box.text.strip() if self.name_input_box.text.strip() else "Adventurer"
                 print(f"--- Character '{character_name}' (from Enter) with background '{self.selected_background_data.get('name', 'Unknown')}' confirmed! ---")
                 game_world = World()
                 game_world.create_character(name=character_name, background_data=self.selected_background_data)
                 game_view = GameView(game_world)
                 self.window.show_view(game_view)
-        elif symbol == arcade.key.ESCAPE:
+        elif symbol == arcade.key.ESCAPE: # type: ignore
             self.window.show_view(self.previous_view)
 
     def on_key_release(self, symbol: int, modifiers: int):
