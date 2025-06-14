@@ -40,6 +40,9 @@ MENU_VIEW_RIGHT_PANEL_BACKGROUND_IMAGE = os.path.join(UI_ART_PATH, "background_p
 INVENTORY_BACKGROUND_IMAGE = os.path.join(UI_ART_PATH, "background_inventory.jpg")
 GAME_VIEW_RIGHT_PANEL_BACKGROUND_IMAGE = os.path.join(UI_ART_PATH, "background_panel_menu.png") # Assuming same as menu for now
 MENU_BUTTON_IMAGE_PATH = os.path.join(UI_ART_PATH, "menu_button.png")
+CC_LEFT_PANEL_BUTTON_AREA_BG_IMAGE = os.path.join(UI_ART_PATH, "cc_left_panel_button_area_bg.png") # New
+CHARACTER_ART_PATH = os.path.join(ART_BASE_PATH, "character_backgrounds") # New
+DEFAULT_CHARACTER_ART_IMAGE = os.path.join(CHARACTER_ART_PATH, "default_char_art.png") # New default art
 
 # --- UI Element Constants ---
 # General Button properties (for the main menu, can be adapted)
@@ -71,12 +74,18 @@ ITEM_TEXT_OFFSET_X = ITEM_ICON_DRAW_SIZE[0] + 10
 ITEM_SECTION_SPACING = 20
 
 # Character Creation View Constants
-CC_BACKGROUND_BUTTON_WIDTH = MENU_PANEL_WIDTH - 40
-CC_BACKGROUND_BUTTON_HEIGHT = 60
+CC_BACKGROUND_BUTTON_WIDTH = MENU_PANEL_WIDTH - 80 # Revert to 160px width (240 - 80)
+CC_BACKGROUND_BUTTON_HEIGHT = 40
 CC_BACKGROUND_BUTTON_SPACING = 15
-CC_DESC_AREA_X = LEFT_PADDING + CC_BACKGROUND_BUTTON_WIDTH + 30
+CC_DESC_AREA_X = LEFT_PADDING + CC_BACKGROUND_BUTTON_WIDTH # Remove the +30 spacing
 CC_DESC_AREA_Y_START_OFFSET = 50
-CC_DESC_AREA_WIDTH = GAME_AREA_WIDTH - CC_DESC_AREA_X - LEFT_PADDING
-CC_NAME_INPUT_WIDTH = CC_BACKGROUND_BUTTON_WIDTH - 20
+CC_DESC_AREA_WIDTH = GAME_AREA_WIDTH - CC_DESC_AREA_X - LEFT_PADDING # This will expand as CC_DESC_AREA_X shifts left
+CC_NAME_INPUT_WIDTH = CC_BACKGROUND_BUTTON_WIDTH - 20 # Name input width will also reduce
 CC_NAME_INPUT_HEIGHT = 40
 CC_DESC_AREA_HEIGHT = SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT - CC_DESC_AREA_Y_START_OFFSET - BUTTON_HEIGHT - 20
+CC_DESC_TEXT_PADDING = 10 # Padding inside the description text area
+
+# Character Creation View - Character Art Area
+CC_CHAR_ART_Y_START_OFFSET = 10 # Reduced: Space below buttons before art starts
+CC_CHAR_ART_BOTTOM_PADDING = 10 # Reduced: Space from bottom of panel to bottom of art
+CC_CHAR_ART_WIDTH = CC_BACKGROUND_BUTTON_WIDTH # Art width same as buttons
