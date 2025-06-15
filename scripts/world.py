@@ -74,6 +74,10 @@ class World():
         # Grimoire state
         self.selected_grimoire_entry = None # Stores the currently viewed grimoire entry dict
 
+        # Skill usage state
+        self.in_skill_selection_mode = False
+        self.available_skills_for_selection = []
+        self.selected_skill_id_for_targeting = None
 
 
     def append_message(self, message):
@@ -196,6 +200,41 @@ class World():
                 return self._player_attack_action()
             elif choice_text == "Flee":
                 return self._player_flee_action()
+            elif choice_text == "Use Skill": # New combat action
+                self._enter_skill_selection_mode()
+                return "select_skill_to_use" # New state for GameView
+            elif choice_text.startswith("SelectSkill: "): # Player chose a skill from the list
+                skill_id_chosen = choice_text.split(": ", 1)[1]
+                can_use, reason = self.player.can_use_skill(skill_id_chosen)
+                if not can_use:
+                    self.append_message(reason)
+                    self._exit_skill_selection_mode() # Go back to main combat options
+                    return "player_combat_turn"
+                
+                skill_def = self.player.world_abilities_data[skill_id_chosen]
+                # For now, assume all active skills target the current enemy.
+                # Future: Add target selection phase if skill_def["target"] is "self", "ally", or needs choice.
+                if skill_def.get("target") == "enemy" and self.current_combat_enemy:
+                    self.player.use_skill(skill_id_chosen, self.current_combat_enemy, self.append_message)
+                    self._exit_skill_selection_mode()
+                    self.is_player_combat_turn = False # Player's turn is over
+                    if self.current_combat_enemy.is_dead():
+                        return self._handle_enemy_defeated()
+                    else:
+                        return self._process_enemy_turn() # Enemy's turn
+                elif skill_def.get("target") == "self":
+                    self.player.use_skill(skill_id_chosen, self.player, self.append_message) # Target self
+                    self._exit_skill_selection_mode()
+                    self.is_player_combat_turn = False # Player's turn is over
+                    # If it was a self-buff, proceed to enemy turn
+                    return self._process_enemy_turn()
+                else:
+                    self.append_message(f"Skill '{skill_def.get('name', skill_id_chosen)}' needs a valid target or targeting type not yet implemented.")
+                    self._exit_skill_selection_mode()
+                    return "player_combat_turn"
+            elif choice_text == "Cancel Skill Selection":
+                self._exit_skill_selection_mode()
+                return self._player_flee_action()
             else:
                 self.append_message(f"'{choice_text}' is not a valid combat action now.")
                 return "player_combat_turn" # Stay in player's turn, show options again
@@ -272,6 +311,10 @@ class World():
 
         if self.in_travel_selection_mode:
             return self.handle_travel_choice(choice_text)
+
+        # Handle skill selection outside of direct combat turn (e.g., if a menu was brought up)
+        # This might be redundant if skill selection is strictly a combat phase.
+        # For now, let's assume skill selection is initiated from combat turn.
 
         if 'Fight' in choice_text:
             if not self.current_area.enemies:
@@ -421,6 +464,10 @@ class World():
         self.active_combat_instance.add_combatant(self.player)
         self.active_combat_instance.add_combatant(self.current_combat_enemy)
         self.active_combat_instance.print_combatants() # Logs who acts first
+
+        # Process turn start effects for both combatants
+        self.player.process_conditions_at_turn_start(self.append_message)
+        self.current_combat_enemy.process_conditions_at_turn_start(self.append_message)
         self.append_message('') # Add spacing
 
         first_attacker = self.active_combat_instance.combatant_list[0]
@@ -428,11 +475,38 @@ class World():
             self.is_player_combat_turn = True
             self.append_message("--- Your Turn ---")
             self.append_message("It's your turn!")
+            self.player.log_stat_breakdown() # Log player stats at turn start
             return "player_combat_turn"
         else:
             # Enemy attacks first, then it will be player's turn (if player survives)
             self.is_player_combat_turn = False # Not player's turn yet
             return self._process_enemy_turn()
+
+    def _handle_enemy_defeated(self):
+        """Handles logic after an enemy is defeated."""
+        enemy_name = "the enemy"
+        if self.current_combat_enemy:
+            enemy_name = self.current_combat_enemy.name
+        else:
+            self.append_message("Error: Enemy reference missing during defeat handling.")
+        self.append_message(f"You have defeated {enemy_name}!")
+
+        dropped_item = None
+        if self.active_combat_instance and self.current_combat_enemy:
+            dropped_item = self.active_combat_instance.generate_loot(self.player, self.current_combat_enemy)
+        elif not self.active_combat_instance:
+            self.append_message("Error: Combat instance missing, cannot generate loot.")
+        time_passage_result = self.increment_time(1)
+        self._end_combat_sequence()
+
+        if dropped_item:
+            self.pending_loot_item = dropped_item
+            self.in_loot_decision_mode = True
+            return "show_loot_options"
+        if time_passage_result == "exhausted":
+            return self.rest()
+        
+        return "area_description"
 
     def _player_attack_action(self):
         """Processes the player's attack choice."""
@@ -445,25 +519,12 @@ class World():
         self.is_player_combat_turn = False # Player's turn is over
 
         if self.current_combat_enemy.is_dead():
-            self.append_message(f"You have defeated {self.current_combat_enemy.name}!")
-            # self.append_message('') # Spacing will be handled by loot messages or lack thereof
-            
-            dropped_item = self.active_combat_instance.generate_loot(self.player, self.current_combat_enemy)
-            time_passage_result = self.increment_time(1) # Combat encounter took time (moved here from loot decision)
-            self._end_combat_sequence()
-
-            if time_passage_result == "exhausted":
-                return self.rest()
-
-            if dropped_item:
-                self.pending_loot_item = dropped_item
-                self.in_loot_decision_mode = True
-                return "show_loot_options" # New state for GameView to trigger specific loot UI
-            else:
-                # Time was already incremented above
-                return "area_description" # No loot, combat over
+            return self._handle_enemy_defeated()
         else:
+            # Process player's turn-end effects (like condition duration ticks)
+            self.player.process_conditions_at_turn_end(self.append_message)
             # Enemy's turn
+            self.current_combat_enemy.process_conditions_at_turn_start(self.append_message) # Enemy starts their turn
             return self._process_enemy_turn()
 
     def _process_enemy_turn(self):
@@ -496,10 +557,13 @@ class World():
             self.player_defeated_retreat() # Immediately handle retreat (move to camp, log messages)
             return "show_defeat_log_at_camp" # New state for GameView to display this log at camp
         else:
+            # Process enemy's turn-end effects
+            self.current_combat_enemy.process_conditions_at_turn_end(self.append_message)
             # Back to player's turn
             self.is_player_combat_turn = True
             self.append_message("--- Your Turn ---")
             self.append_message("It's your turn!")
+            self.player.log_stat_breakdown() # Log player stats at turn start
             return "player_combat_turn"
 
     def _player_flee_action(self):
@@ -528,12 +592,28 @@ class World():
         self.current_combat_enemy = None
         self.is_player_combat_turn = False
         # self.player_must_flee_combat = False # No longer needed
+        self._exit_skill_selection_mode() # Ensure skill selection is also exited
         self._end_loot_decision_phase() # Also clear loot state if combat ends abruptly
 
     def _end_loot_decision_phase(self):
         # print(f"DEBUG WORLD._end_loot_decision_phase: Setting in_loot_decision_mode=False, pending_loot_item=None. Was: {self.in_loot_decision_mode}, pending_loot_item='{self.pending_loot_item.name if self.pending_loot_item else None}'") # DEBUG
         self.in_loot_decision_mode = False
         self.pending_loot_item = None
+
+    def _enter_skill_selection_mode(self):
+        self.in_skill_selection_mode = True
+        self.available_skills_for_selection.clear()
+        for skill_id in sorted(list(self.player.abilities)): # Iterate over known abilities
+            if skill_id in self.player.world_abilities_data:
+                skill_def = self.player.world_abilities_data[skill_id]
+                if skill_def.get("type") == "active_combat":
+                    self.available_skills_for_selection.append(skill_id)
+        self.append_message("Select a skill to use:")
+
+    def _exit_skill_selection_mode(self):
+        self.in_skill_selection_mode = False
+        self.available_skills_for_selection.clear()
+        self.selected_skill_id_for_targeting = None
 
     def player_defeated_retreat(self):
         """Handles the state changes and messages when the player is defeated and flees."""
@@ -595,6 +675,8 @@ class World():
             "camp": self.camp,
             "day_cycle": self.day_cycle.to_dict(),
             "message_log": list(self.message_log),
+            # Active conditions on player are saved within player.to_dict()
+            # Combat-specific states like active_combat_instance are not saved.
             # area_list, enemy_list, all_items, grimoire_entries are rebuilt by Builder on load.
         }
         return world_data

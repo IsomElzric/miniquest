@@ -139,6 +139,15 @@ class GameView(arcade.View):
         elif menu_type == "player_combat_turn": 
             options_text = ["Attack", "Flee", "Check Bags"] 
             self.current_menu_options = options_text
+            # Add "Use Skill" if player has any active skills
+            has_active_skills = False
+            for skill_id in self.world.player.abilities:
+                if skill_id in self.world.player.world_abilities_data and \
+                   self.world.player.world_abilities_data[skill_id].get("type") == "active_combat":
+                    has_active_skills = True
+                    break
+            if has_active_skills:
+                options_text.insert(1, "Use Skill") # Insert "Use Skill" after "Attack"
         elif menu_type == "loot_decision_menu": 
             options_text = []
             if self.world.pending_loot_item:
@@ -189,6 +198,16 @@ class GameView(arcade.View):
         elif menu_type == "select_item_to_drop_for_loot_menu": 
             options_text = ["Cancel Drop"]
             self.current_menu_options = options_text
+        elif menu_type == "select_skill_to_use": # New menu for skill selection
+            options_text = []
+            if self.world.available_skills_for_selection:
+                for skill_id in self.world.available_skills_for_selection:
+                    skill_name = self.world.player.world_abilities_data.get(skill_id, {}).get("name", skill_id)
+                    can_use, _ = self.world.player.can_use_skill(skill_id) # For potential visual cues later
+                    options_text.append(f"{skill_name}") # GameView will send "SelectSkill: {skill_id}"
+            options_text.append("Cancel Skill Selection") # Always allow cancelling
+            self.current_menu_options = options_text
+
         
         menu_content_area_top_y = SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT
         actions_title_y = menu_content_area_top_y - TOP_PADDING
@@ -202,7 +221,10 @@ class GameView(arcade.View):
                 if len(parts) > 1 and parts[0].isdigit():
                     prefix = raw_option_text.split(". ", 1)[0]
                     int(prefix) 
-                    display_text = raw_option_text.split(". ", 1)[1]
+                    display_text = raw_option_text.split(". ", 1)[1] # Text after "N. "
+                    action_command = display_text # Command is the skill name or action
+                elif menu_type == "select_skill_to_use" and raw_option_text != "Cancel Skill Selection":
+                    # For skills, the display_text is the skill name, action_command will be "SelectSkill: skill_id"
                     action_command = display_text 
 
             if self.menu_button_texture:
@@ -215,7 +237,13 @@ class GameView(arcade.View):
             button_sprite.center_x = button_center_x
             button_sprite.center_y = first_button_center_y - i * (MENU_BUTTON_HEIGHT + MENU_BUTTON_VERTICAL_SPACING)
             button_sprite.properties['display_text'] = display_text
-            button_sprite.properties['action_command'] = action_command 
+            # For skill selection, the action_command needs to be specific
+            if menu_type == "select_skill_to_use" and action_command != "Cancel Skill Selection":
+                # Find the original skill_id based on the display_text (skill_name)
+                original_skill_id = next((s_id for s_id in self.world.available_skills_for_selection if self.world.player.world_abilities_data.get(s_id, {}).get("name", s_id) == display_text), display_text)
+                button_sprite.properties['action_command'] = f"SelectSkill: {original_skill_id}"
+            else:
+                button_sprite.properties['action_command'] = action_command
             self.menu_action_buttons.append(button_sprite)
 
     def _prepare_scrollable_text(self, full_text_content, font_size_for_metric, area_width_pixels):
@@ -258,7 +286,8 @@ class GameView(arcade.View):
             self._prepare_scrollable_text("\n".join(self.log_messages_to_display), TEXT_AREA_FONT_SIZE, consistent_text_area_width)
         elif self.display_mode == "combat_log":
             self._prepare_scrollable_text("\n".join(self.log_messages_to_display), LOG_AREA_FONT_SIZE, consistent_text_area_width)
-        elif self.display_mode in ["inventory_management", "view_bags", "select_item_to_equip_display", 
+        elif self.display_mode in ["inventory_management", "view_bags", 
+                                   "select_item_to_equip_display", "select_skill_to_use_display", # Added skill display
                                    "loot_decision_display", "select_item_to_drop_for_loot_display"] and \
              self.display_mode not in ["select_item_to_equip_display"]: # Exclude text-based equip list
             self.current_scrollable_lines.clear() 
@@ -266,6 +295,15 @@ class GameView(arcade.View):
             # Calculate height for icon views
             self.current_view_content_height = self._calculate_icon_view_content_height(self.display_mode)
             pass 
+        elif self.display_mode == "select_skill_to_use_display": # For displaying skill details if needed
+            self.current_scrollable_lines.clear()
+            self.scroll_offset_y = 0.0
+            # Example: Display details of the skill being hovered or selected from the menu
+            # For now, this mode might just show the log messages from world.append_message
+            # If a skill was just selected, world.handle_player_choice would have processed it.
+            # This display mode might be more for a dedicated skill info screen.
+            # For now, let's assume it behaves like combat_log for messages.
+            self._prepare_scrollable_text("\n".join(self.log_messages_to_display), LOG_AREA_FONT_SIZE, consistent_text_area_width)
         elif self.display_mode == "item_details_display":
             self.current_scrollable_lines.clear()
             self.scroll_offset_y = 0.0
@@ -492,7 +530,7 @@ class GameView(arcade.View):
         )
         self.player.update_stats() 
         arcade.draw_text(
-            f"HP: {self.player.current_health}/{self.player.max_health} | Atk: {self.player.attack + self.player.attack_mod} | Def: {self.player.defense + self.player.defense_mod} | Spd: {self.player.speed + self.player.speed_mod}",
+            f"Health: {self.player.current_health}/{self.player.max_health} | Weave: {self.player.current_weave}/{self.player.max_weave} | Atk: {self.player.attack:.1f} | Def: {self.player.defense:.1f} | Spd: {self.player.speed:.1f}",
             LEFT_PADDING,
             player_info_y - 25,
             text_color,
@@ -620,7 +658,7 @@ class GameView(arcade.View):
         icon_full_panel_views = ["inventory_management", "view_bags", "loot_decision_display", "select_item_to_drop_for_loot_display"]
         if self.display_mode in icon_full_panel_views:
             self.scrollable_text_rect_on_screen = (
-                0,  # left_x of the game panel
+                LEFT_PADDING,  # left_x of the game panel
                 0,  # bottom_y of the game panel (bottom of the screen)
                 GAME_AREA_WIDTH,  # width of the game panel
                 SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT # height of the game panel
@@ -628,7 +666,8 @@ class GameView(arcade.View):
             # For icon views, content drawing starts from the top of the game panel area (below banner)
             _scroll_area_top_y_for_lines = SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT - ICON_PANEL_TOP_MARGIN 
         else: # Text-based views
-            self.scrollable_text_rect_on_screen = (
+            # Ensure scrollable_text_rect_on_screen is defined for all text modes
+            self.scrollable_text_rect_on_screen = ( 
                 description_x,  
                 _scroll_area_top_y_for_lines - _scroll_area_height_for_lines,  
                 description_width,  
@@ -640,7 +679,9 @@ class GameView(arcade.View):
         # Rolling back viewport changes. Clipping will rely on drawing logic within bounds.
         
         # --- Text-based views drawing loop ---
-        if self.display_mode in ["welcome_screen", "area_description", "combat_log", "item_details_display", "select_item_to_equip_display"]: # Ensure all text views are covered
+        text_based_display_modes = ["welcome_screen", "area_description", "combat_log", 
+                                    "item_details_display", "select_item_to_equip_display", "select_skill_to_use_display"]
+        if self.display_mode in text_based_display_modes:
             if self.current_scrollable_lines:
                 first_visible_line_idx = int(self.scroll_offset_y / TEXT_AREA_LINE_HEIGHT)
                 lines_in_view = int(self.scrollable_text_rect_on_screen[3] / TEXT_AREA_LINE_HEIGHT) if self.scrollable_text_rect_on_screen[3] > 0 else 0
@@ -1123,6 +1164,10 @@ class GameView(arcade.View):
                 elif next_game_state == "select_item_to_drop_for_loot": 
                     self.display_mode = "select_item_to_drop_for_loot_display"
                     self.update_menu_options("select_item_to_drop_for_loot_menu")
+                elif next_game_state == "select_skill_to_use": # New state from World
+                    self.display_mode = "select_skill_to_use_display" # Or "combat_log" if just showing messages
+                    self.update_menu_options("select_skill_to_use")
+                    # Log messages already extended, text will be prepared
                 elif next_game_state == "area_description": 
                     self.display_mode = "area_description"
                     self.update_menu_options("main") 

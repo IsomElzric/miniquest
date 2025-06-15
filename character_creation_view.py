@@ -218,8 +218,72 @@ class CharacterCreationView(arcade.View):
                 arcade.color.DARK_SLATE_GRAY # Consistent fallback
             )
 
+        # Draw selected background description and stats (Moved from _draw_character_art_texture)
+        if self.selected_background_key:
+            # Define the viewport for the description area
+            desc_panel_top_y = SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT - CC_DESC_AREA_Y_START_OFFSET # Top of the description content area
+            desc_panel_bottom_y = MENU_BUTTON_HEIGHT * 3.5 # Use MENU_BUTTON_HEIGHT. Approx bottom, above confirm/back buttons
+            desc_panel_height = desc_panel_top_y - desc_panel_bottom_y
+            self.desc_area_view_rect = (CC_DESC_AREA_X, desc_panel_bottom_y, CC_DESC_AREA_WIDTH, desc_panel_height)
+
+            # Calculate drawing coordinates and width for text, applying internal padding
+            text_draw_x = CC_DESC_AREA_X + CC_DESC_TEXT_PADDING
+            text_draw_width = CC_DESC_AREA_WIDTH - (2 * CC_DESC_TEXT_PADDING)
+
+            # Wrap and draw description
+            wrap_width_chars = int(text_draw_width / (TEXT_AREA_FONT_SIZE * 0.6)) if (TEXT_AREA_FONT_SIZE * 0.6) > 0 else 50
+
+            selected_bg_data = self.backgrounds_data[self.selected_background_key]
+            stat_summary_lines = []
+            stats = selected_bg_data.get("stats", {})
+            stat_summary_lines.append("Initial Stats:")
+            stat_summary_lines.append(f"  Attack: {stats.get('attack', 'N/A')}")
+            stat_summary_lines.append(f"  Defense: {stats.get('defense', 'N/A')}")
+            stat_summary_lines.append(f"  Speed: {stats.get('speed', 'N/A')}")
+            
+            temp_total_height = 30 
+            for line in stat_summary_lines:
+                temp_total_height += TEXT_AREA_LINE_HEIGHT
+            temp_total_height += TEXT_AREA_LINE_HEIGHT
+            
+            description_text = self.backgrounds_data[self.selected_background_key].get("description", "No description.")
+            wrapped_description = textwrap.wrap(description_text, width=wrap_width_chars)
+            for line in wrapped_description:
+                temp_total_height += TEXT_AREA_LINE_HEIGHT
+            self.desc_content_total_height = temp_total_height
+
+            max_scroll = max(0, self.desc_content_total_height - self.desc_area_view_rect[3])
+            self.desc_scroll_offset_y = arcade.clamp(self.desc_scroll_offset_y, 0, max_scroll)
+            
+            title_start_y = desc_panel_top_y + self.desc_scroll_offset_y # CORRECTED: Subtracted scroll offset
+            title_block_height = 30
+
+            if self.desc_scroll_offset_y < (1.5 * TEXT_AREA_LINE_HEIGHT):
+                arcade.draw_text(f"Background: {self.selected_background_key}",
+                                 text_draw_x, title_start_y, arcade.color.GOLD, font_size=18, bold=True, anchor_y="top",
+                                 width=text_draw_width)
+            
+            current_draw_y = title_start_y - title_block_height
+
+            for line_num, line in enumerate(stat_summary_lines):
+                line_top_y = current_draw_y
+                line_bottom_y = current_draw_y - TEXT_AREA_LINE_HEIGHT
+                if line_bottom_y < self.desc_area_view_rect[1] + self.desc_area_view_rect[3] and line_top_y > self.desc_area_view_rect[1]:
+                    arcade.draw_text(line, text_draw_x, current_draw_y, arcade.color.LIGHT_GRAY, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top", width=text_draw_width)
+                current_draw_y -= TEXT_AREA_LINE_HEIGHT
+            
+            current_draw_y -= TEXT_AREA_LINE_HEIGHT
+
+            for line_num, line in enumerate(wrapped_description):
+                line_top_y = current_draw_y
+                line_bottom_y = current_draw_y - TEXT_AREA_LINE_HEIGHT
+                if line_bottom_y < self.desc_area_view_rect[1] + self.desc_area_view_rect[3] and line_top_y > self.desc_area_view_rect[1]:
+                    arcade.draw_text(line, text_draw_x, current_draw_y, arcade.color.WHITE, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top", width=text_draw_width)
+                current_draw_y -= TEXT_AREA_LINE_HEIGHT
+
+        # Draw UI elements (buttons) and manager (if any UIElements are added to it)
         self.ui_elements.draw()
-        self.manager.draw() # Draw the UI Manager (for the input text box)
+        self.manager.draw() 
 
         # Draw text on buttons
         for button in self.ui_elements:
@@ -241,108 +305,19 @@ class CharacterCreationView(arcade.View):
         if not texture_to_draw:
             return
 
-        # The character art (and default art) should be drawn to fill the entire left panel,
-        # same as the left_panel_button_area_texture.
-        # Both images are expected to be 170x520 and use transparency.
-
         panel_width = LEFT_PADDING + CC_BACKGROUND_BUTTON_WIDTH
         panel_height = SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT
         panel_center_x = panel_width / 2
         panel_center_y = panel_height / 2
 
-        # Draw the texture (character art or default art) to fill the panel.
-        # No scaling needed if the art is already the correct panel size (170x520).
         if panel_height > 0 and panel_width > 0:
-            # Ensure the texture itself has dimensions before trying to draw it scaled to panel.
-            # If texture is already 170x520, width=panel_width, height=panel_height is fine.
-
             arcade.draw_texture_rectangle(
                 center_x=panel_center_x,
                 center_y=panel_center_y,
-                width=panel_width,  # Draw at full panel width
-                height=panel_height, # Draw at full panel height
+                width=panel_width,
+                height=panel_height,
                 texture=texture_to_draw
             )
-
-        # Draw selected background description and stats
-        if self.selected_background_key:
-            # Adjust starting Y for description to be below the name input box
-            # Define the viewport for the description area
-            desc_panel_top_y = SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT - CC_DESC_AREA_Y_START_OFFSET # Top of the description content area
-            desc_panel_bottom_y = MENU_BUTTON_HEIGHT * 3.5 # Use MENU_BUTTON_HEIGHT. Approx bottom, above confirm/back buttons
-            desc_panel_height = desc_panel_top_y - desc_panel_bottom_y
-            self.desc_area_view_rect = (CC_DESC_AREA_X, desc_panel_bottom_y, CC_DESC_AREA_WIDTH, desc_panel_height)
-
-            # Calculate drawing coordinates and width for text, applying internal padding
-            text_draw_x = CC_DESC_AREA_X + CC_DESC_TEXT_PADDING
-            text_draw_width = CC_DESC_AREA_WIDTH - (2 * CC_DESC_TEXT_PADDING)
-
-            # Wrap and draw description
-            wrap_width_chars = int(text_draw_width / (TEXT_AREA_FONT_SIZE * 0.6)) if (TEXT_AREA_FONT_SIZE * 0.6) > 0 else 50
-
-            # --- Reordered: Draw Details (Stats) First ---
-            # Dynamically generate the stat summary lines
-            selected_bg_data = self.backgrounds_data[self.selected_background_key]
-            stat_summary_lines = []
-
-            # Initial Stats
-            stats = selected_bg_data.get("stats", {})
-            stat_summary_lines.append("Initial Stats:")
-            stat_summary_lines.append(f"  Attack: {stats.get('attack', 'N/A')}")
-            stat_summary_lines.append(f"  Defense: {stats.get('defense', 'N/A')}")
-            stat_summary_lines.append(f"  Speed: {stats.get('speed', 'N/A')}")
-            
-            # Calculate total content height for scrolling
-            temp_total_height = 30 # Initial space for title
-            for line in stat_summary_lines: # Use the dynamically generated lines
-                temp_total_height += TEXT_AREA_LINE_HEIGHT
-            temp_total_height += TEXT_AREA_LINE_HEIGHT # Extra space after details
-            
-            description_text = self.backgrounds_data[self.selected_background_key].get("description", "No description.")
-            wrapped_description = textwrap.wrap(description_text, width=wrap_width_chars)
-            for line in wrapped_description:
-                temp_total_height += TEXT_AREA_LINE_HEIGHT
-            self.desc_content_total_height = temp_total_height
-
-            # Clamp scroll offset
-            max_scroll = max(0, self.desc_content_total_height - self.desc_area_view_rect[3])
-            self.desc_scroll_offset_y = arcade.clamp(self.desc_scroll_offset_y, 0, max_scroll)
-            
-            # Update draw_y based on clamped scroll offset
-            # This is the Y where the title *would* start if drawn
-            title_start_y = desc_panel_top_y + self.desc_scroll_offset_y
-            title_block_height = 30 # The space the title and its bottom margin occupy
-
-            # Conditionally draw the header
-            # Hide if scrolled down by more than roughly one line height
-            # Show if offset is 0 (or very close to it)
-            # The threshold 1.5 * TEXT_AREA_LINE_HEIGHT is approx 33.
-            if self.desc_scroll_offset_y < (1.5 * TEXT_AREA_LINE_HEIGHT):
-                arcade.draw_text(f"Background: {self.selected_background_key}", # Title
-                                 text_draw_x, title_start_y, arcade.color.GOLD, font_size=18, bold=True, anchor_y="top",
-                                 width=text_draw_width)
-            
-            # current_draw_y for the details should start AFTER the space reserved for the title
-            current_draw_y = title_start_y - title_block_height
-
-            # Draw Stat Summary (dynamically generated)
-            for line_num, line in enumerate(stat_summary_lines):
-                # Manual clipping: only draw if line is within the visible rect
-                line_top_y = current_draw_y
-                line_bottom_y = current_draw_y - TEXT_AREA_LINE_HEIGHT
-                if line_bottom_y < self.desc_area_view_rect[1] + self.desc_area_view_rect[3] and line_top_y > self.desc_area_view_rect[1]:
-                    arcade.draw_text(line, text_draw_x, current_draw_y, arcade.color.LIGHT_GRAY, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top", width=text_draw_width)
-                current_draw_y -= TEXT_AREA_LINE_HEIGHT
-            
-            current_draw_y -= TEXT_AREA_LINE_HEIGHT # Extra space after details
-
-            # Draw Description
-            for line_num, line in enumerate(wrapped_description):
-                line_top_y = current_draw_y
-                line_bottom_y = current_draw_y - TEXT_AREA_LINE_HEIGHT
-                if line_bottom_y < self.desc_area_view_rect[1] + self.desc_area_view_rect[3] and line_top_y > self.desc_area_view_rect[1]:
-                    arcade.draw_text(line, text_draw_x, current_draw_y, arcade.color.WHITE, font_size=TEXT_AREA_FONT_SIZE, anchor_y="top", width=text_draw_width)
-                current_draw_y -= TEXT_AREA_LINE_HEIGHT
 
     def on_mouse_press(self, x: float, y: float, button: int, modifiers: int):
         clicked = arcade.get_sprites_at_point((x, y), self.ui_elements)

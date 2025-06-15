@@ -11,15 +11,30 @@ class Combat():
 
     def add_combatant(self, fighter):
         try:
-            # Note: speed_mod is already included in fighter.speed @property calculation
-            # if fighter.speed > self.combatant_list[0].speed + self.combatant_list[0].speed_mod:
-            if fighter.speed + fighter.speed_mod > self.combatant_list[0].speed + self.combatant_list[0].speed_mod: # Use property directly
-                self.combatant_list.insert(0, fighter)
-            else:
+            if not self.combatant_list: # First combatant to be added
                 self.combatant_list.append(fighter)
-        except IndexError:
-            self.combatant_list.append(fighter)
+            else:
+                # Second combatant is being added, determine order
+                existing_fighter = self.combatant_list[0]
+                new_fighter = fighter
 
+                new_has_first_strike = new_fighter.has_ability("first_strike")
+                existing_has_first_strike = existing_fighter.has_ability("first_strike")
+
+                if new_has_first_strike and not existing_has_first_strike:
+                    self.combatant_list.insert(0, new_fighter) # New fighter with first_strike goes first
+                elif existing_has_first_strike and not new_has_first_strike:
+                    self.combatant_list.append(new_fighter) # Existing fighter with first_strike stays first
+                else: # Both or neither have first_strike, compare speed
+                    # fighter.speed already includes speed_mod due to @property
+                    if new_fighter.speed > existing_fighter.speed:
+                        self.combatant_list.insert(0, new_fighter)
+                    else:
+                        self.combatant_list.append(new_fighter)
+        except IndexError: # Should not be strictly needed with the new logic, but kept as a fallback.
+            # This case implies combatant_list was unexpectedly empty when trying to access [0]
+            # which the `if not self.combatant_list:` above should prevent.
+            self.combatant_list.append(fighter)
     def print_combatants(self):
         # NEW: Append to message_log instead of print
         self.message_log('{} acts first with base speed {}! {} acts second with base speed {}!'.format( # Changed from .append

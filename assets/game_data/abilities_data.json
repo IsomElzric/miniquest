@@ -9,22 +9,25 @@
         }
     },
     "leverage_weakness": {
-        "type": "passive_or_active_combat",
+        "type": "active_combat",
         "name": "Leverage Weakness",
+        "target": "enemy",
         "description": "Description of how leveraging weakness works (e.g., bonus damage against certain enemy types, or an active skill to debuff an enemy).",
+        "cost": { "weave": 5 },
         "effect": {
-            "conditional_damage_bonus": { "target_status": "vulnerable", "bonus_amount": 5 },
-            "notes": "Example: Deals +5 damage if target is vulnerable."
+            "damage": { "amount": 8, "type": "physical" },
+            "notes": "Example: Deals 8 physical damage. (Conditional bonus can be added later)"
         }
     },
     "shattering_blow": {
         "type": "active_combat",
         "name": "Shattering Blow",
+        "target": "enemy",
         "description": "A powerful attack that can break enemy defenses or deal significant damage.",
-        "cost": { "stamina": 10, "action_points": 1 },
+        "cost": { "weave": 10 },
         "effect": {
             "damage_multiplier": 1.2,
-            "status_effect_on_target": { "name": "armor_reduced", "duration_turns": 2, "magnitude": -2 },
+            "apply_condition": { "name": "armor_reduced", "duration": 2, "potency": -2 },
             "notes": "Example: Deals 120% damage and reduces target's armor by 2 for 2 turns."
         }
     },
@@ -33,17 +36,19 @@
         "name": "Speed Focus",
         "description": "Enhances agility and reaction time.",
         "effect": {
-            "stat_bonus_flat": { "speed": 1 },
-            "notes": "Example: +1 to speed stat."
+            "stat_bonus_percent": { "speed": 0.15 },
+            "notes": "Example: +15% to speed stat."
         }
     },
     "exploit_weakness": {
-        "type": "passive_or_active_combat",
+        "type": "active_combat",
         "name": "Exploit Weakness",
+        "target": "self",
         "description": "Capitalizes on enemy vulnerabilities for increased effectiveness.",
+        "cost": { "weave": 7 },
         "effect": {
-            "crit_chance_bonus": 0.15,
-            "notes": "Example: +15% critical hit chance."
+            "apply_condition": { "name": "heightened_crit", "duration": 1, "potency": 15 },
+            "notes": "Example: Applies a condition granting +15% critical hit chance for the next attack/turn."
         }
     },
     "first_strike": {
@@ -56,28 +61,34 @@
         }
     },
     "defensive_actions": {
-        "type": "passive_or_active_combat",
+        "type": "active_combat",
         "name": "Defensive Actions",
+        "target": "self",
         "description": "Improves survivability through enhanced defensive maneuvers.",
+        "cost": { "weave": 5 },
         "effect": {
-            "stat_bonus_percent": { "defense": 0.1 },
-            "notes": "Example: +10% to defense stat."
+            "temporary_stat_bonus": { "defense": 3 },
+            "duration_turns": 3,
+            "notes": "Example: +3 to defense for 3 turns."
         }
     },
     "mending_form": {
-        "type": "passive_or_active_utility",
+        "type": "active_combat",
         "name": "Mending Form",
+        "target": "self",
         "description": "Allows for slow recovery or improved healing.",
+        "cost": { "weave": 8 },
         "effect": {
-            "health_regen_per_turn": 1,
-            "notes": "Example: Regenerates 1 HP per turn (in or out of combat)."
+            "apply_condition": { "name": "mending", "duration": 3, "potency": 5 },
+            "notes": "Example: Applies a condition that regenerates 5 HP per turn for 3 turns."
         }
     },
     "stalwart_stance": {
         "type": "active_combat_stance",
         "name": "Stalwart Stance",
+        "target": "self",
         "description": "A defensive posture that greatly increases resilience at the cost of mobility or offense.",
-        "cost": { "action_points": 1 },
+        "cost": { "weave": 6 },
         "effect": {
             "temporary_stat_bonus": { "defense": 5, "speed": -2 },
             "duration_turns": 3,
@@ -94,23 +105,26 @@
         }
     },
     "slip_the_weave": {
-        "type": "active_combat_or_utility",
+        "type": "active_combat",
         "name": "Slip the Weave",
+        "target": "self",
         "description": "A momentary distortion of reality allowing for evasion or repositioning.",
-        "cost": { "mana_or_focus": 5 },
+        "cost": { "weave": 5 },
         "effect": {
-            "evasion_chance_bonus": 0.25,
-            "duration_turns": 1,
-            "notes": "Example: +25% evasion for 1 turn."
+            "apply_condition": { "name": "evasive", "duration": 1, "potency": 25 },
+            "notes": "Example: Applies a condition granting +25% evasion for 1 turn."
         }
     },
     "void_glimpse": {
-        "type": "passive_or_active_utility",
+        "type": "active_combat",
         "name": "Void Glimpse",
+        "target": "self",
         "description": "Occasional insights into the unseen, potentially revealing secrets or weaknesses.",
+        "cost": { "weave": 12 },
         "effect": {
-            "reveal_hidden_info_chance": 0.05,
-            "notes": "Example: 5% chance per interaction/area to reveal something hidden. Could also be an active skill."
+            "temporary_stat_bonus": {"attack": 5, "speed": 10},
+            "duration_turns": 1,
+            "notes": "Example: +5 Attack, +10 Speed for 1 turn."
         }
     }
 }

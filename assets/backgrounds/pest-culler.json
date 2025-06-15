@@ -8,9 +8,10 @@
     },
     "details": "Starting Stats:\n  Attack: 4\n  Defense: 2\n  Speed: 5\n\nA Pest-culler strikes with precise, unexpected force, finding crucial weaknesses and exploiting them.",
     "abilities": ["speed_focus", "exploit_weakness", "first_strike"],
-    "stat_gains_per_level": { "attack": 1, "defense": 1, "speed": 3, "health_per_level_bonus": 5 },
+    "stat_gains_per_level": { "attack": 1, "defense": 1, "speed": 3, "health_per_level_bonus": 3 },
     "ability_unlocks_at_level": [
-        { "level": 2, "ability": "exploit_weakness" },
-        { "level": 3, "ability": "first_strike" }
+        { "level": 1, "ability": "speed_focus" },
+        { "level": 1, "ability": "exploit_weakness" },
+        { "level": 1, "ability": "first_strike" }
     ]
 }

@@ -8,9 +8,10 @@
     },
     "details": "Starting Stats:\n  Attack: 3\n  Defense: 3\n  Speed: 3\n\nA Loom-runner flows through the fight, weaving unpredictable paths and striking from unexpected moments.",
     "abilities": ["volitile_stat_gain", "slip_the_weave", "void_glimpse"],
-    "stat_gains_per_level": { "attack": 2, "defense": 1, "speed": 2, "health_per_level_bonus": 5 },
+    "stat_gains_per_level": { "attack": 2, "defense": 1, "speed": 2, "health_per_level_bonus": 4 },
     "ability_unlocks_at_level": [
-        { "level": 2, "ability": "slip_the_weave" },
-        { "level": 3, "ability": "void_glimpse" }
+        { "level": 1, "ability": "volitile_stat_gain" },
+        { "level": 1, "ability": "slip_the_weave" },
+        { "level": 1, "ability": "void_glimpse" }
     ]
 }

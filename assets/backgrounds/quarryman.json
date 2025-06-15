@@ -10,7 +10,8 @@
     "abilities": ["attack_dominance", "leverage_weakness", "shattering_blow"],
     "stat_gains_per_level": { "attack": 3, "defense": 1, "speed": 1, "health_per_level_bonus": 5 },
     "ability_unlocks_at_level": [
-        { "level": 2, "ability": "leverage_weakness" },
-        { "level": 3, "ability": "shattering_blow" }
+        { "level": 1, "ability": "attack_dominance" },
+        { "level": 1, "ability": "leverage_weakness" },
+        { "level": 1, "ability": "shattering_blow" }
     ]
 }

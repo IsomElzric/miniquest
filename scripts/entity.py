@@ -7,6 +7,9 @@ import math # For rounding functions
 from typing import Callable # Import Callable for more specific type hinting
 
 
+TEMPORARY_WEAVE_START = 50
+
+
 class Entity():
     def __init__(self):
         self.is_player = False
@@ -15,17 +18,22 @@ class Entity():
 
         self.target = 20
 
-        self._attack = 1
-        self._defense = 1
-        self._speed = 1
+        self._attack = 1.0
+        self._defense = 1.0
+        self._speed = 1.0
 
         self.health_base = 5 * self.level
         self.max_health = self.health_base
         self.current_health = self.max_health
+
+        self.weave_base = TEMPORARY_WEAVE_START
+        # self.weave_base = 3 * self.level # Example: Weave based on level
+        self.max_weave = self.weave_base
+        self.current_weave = self.max_weave
         
-        self.attack_mod = 0
-        self.defense_mod = 0
-        self.speed_mod = 0
+        self.attack_mod = 0.0 # Initialize as float
+        self.defense_mod = 0.0 # Initialize as float
+        self.speed_mod = 0.0 # Initialize as float
 
         self._damage = 0
         self._mitigation = 0
@@ -39,6 +47,10 @@ class Entity():
         self.background_ability_unlocks = []  # e.g., [{"level": 3, "ability": "some_new_skill"}]
         self.message_log_func: Callable[[str], None] | None = None # To be set by World for the player entity
         self.world_abilities_data = {} # To store reference to all defined abilities
+
+        # For conditions and temporary effects
+        self.active_conditions = {} # e.g., {"burning": {"duration": 3, "potency": 2}}
+        self.temporary_stat_mods = {} # e.g., {"attack": {"amount": 5, "duration": 2}}
     
     @property
     def name(self):
@@ -79,26 +91,28 @@ class Entity():
     
     @attack.setter
     def attack(self, value):
-        self._attack = self.round_up(value)
+        self._attack = value # No rounding on set
 
     @property
     def defense(self):
         return self._defense + self.defense_mod
-    
+
     @defense.setter
     def defense(self, value):
-        self._defense = self.round_up(value)
+        self._defense = value # No rounding on set
 
     @property
     def speed(self):
         return self._speed + self.speed_mod
-    
     @speed.setter
     def speed(self, value):
         self._speed = self.round_up(value)
 
     def reset_health(self):
         self.current_health = self.max_health
+
+    def reset_weave(self):
+        self.current_weave = self.max_weave
 
     def set_health(self, value):
         self.current_health += value
@@ -109,13 +123,19 @@ class Entity():
         
         attack_modifier_high = self.round_up(attack * 2) + self.damage
         attack_modifier_low = self.round_up(attack / 2) + self.damage
-
-        damage = r.randint(attack_modifier_low, attack_modifier_high)
-
-        # message_log(f'{self.name} rolled {damage} for damage...')
-        # message_log('') # Add spacing
         
-        total_damage = self.roll_crit(damage, message_log) 
+        # Convert bounds to integers for randint
+        low_bound = int(attack_modifier_low)
+        high_bound = int(attack_modifier_high)
+
+        # Ensure high_bound is not less than low_bound after integer conversion
+        if high_bound < low_bound:
+            high_bound = low_bound # Avoids error with randint if, e.g., low=2.8 (int 2) and high=2.1 (int 2)
+                                   # or if low=0.9 (int 0) and high=0.2 (int 0)
+
+        base_roll_damage = r.randint(low_bound, high_bound)
+        
+        total_damage = self.roll_crit(base_roll_damage, message_log) 
         return total_damage
     
     def roll_crit(self, damage, message_log): 
@@ -163,7 +183,7 @@ class Entity():
         defense = self.defense + self.defense_mod
         speed = self.speed + self.speed_mod
 
-        message_log(f'{self.name} level {self.level}: Health {self.current_health}/{self.max_health}, Attack {attack}, Defense {defense}, Speed {speed}')
+        message_log(f'{self.name} level {self.level}: Health {self.current_health}/{self.max_health}, Attack {self._attack:.1f} ({self.attack:.1f}), Defense {self._defense:.1f} ({self.defense:.1f}), Speed {self._speed:.1f} ({self.speed:.1f})')
         if self.inventory.equipped_items['Held'] is not None:
             message_log(f'You are currently wielding a {self.inventory.equipped_items["Held"].name} as your weapon.')
         if self.inventory.equipped_items['Body'] is not None:
@@ -182,22 +202,29 @@ class Entity():
         message_log('') # Add an empty line for spacing in the log
 
     def round_up(self, num):
-        rouned = math.ceil(num)
-        return rouned
+        # Rounds up to one decimal place
+        return math.ceil(num * 10) / 10
     
     def round_down(self, num):
-        rounded = math.floor(num)
-        return rounded
+        # Rounds down to one decimal place
+        return math.floor(num * 10) / 10
     
     def update_stats(self):         
         self.health_base = 5 * self.level
         self.max_health = self.health_base + self.round_up(self.defense / 2)
+        self.max_weave = self.weave_base # Add weave calculation if it depends on other stats
 
         # Reset mods before applying from abilities and items
-        self.attack_mod = 0
-        self.defense_mod = 0
-        self.speed_mod = 0
+        self.attack_mod = 0.0
+        self.defense_mod = 0.0
+        self.speed_mod = 0.0
         # self.damage, self.mitigation, self.finesse are base item stats, not mods in the same way.
+
+        # Apply temporary stat mods from conditions/effects
+        for stat, mod_info in self.temporary_stat_mods.items():
+            if stat == "attack": self.attack_mod += mod_info["amount"]
+            elif stat == "defense": self.defense_mod += mod_info["amount"]
+            elif stat == "speed": self.speed_mod += mod_info["amount"]
 
         # Apply passive ability stat bonuses
         for ability_key in self.abilities:
@@ -205,30 +232,115 @@ class Entity():
                 ability_def = self.world_abilities_data[ability_key]
                 if ability_def.get("type") == "passive" and "effect" in ability_def:
                     effect = ability_def["effect"]
+                    # Apply flat bonuses
                     if "stat_bonus_flat" in effect:
                         for stat, bonus in effect["stat_bonus_flat"].items():
                             if stat == "attack": self.attack_mod += bonus
                             elif stat == "defense": self.defense_mod += bonus
                             elif stat == "speed": self.speed_mod += bonus
-
-        total_stats = self.inventory.get_stat_modifiers()
-        for key, value in total_stats.items():
+                    # Apply percentage bonuses (based on base stats)
+                    if "stat_bonus_percent" in effect:
+                        for stat, bonus_percent in effect["stat_bonus_percent"].items():
+                            if stat == "attack":
+                                self.attack_mod += self._attack * bonus_percent
+                            elif stat == "defense":
+                                self.defense_mod += self._defense * bonus_percent
+                            elif stat == "speed":
+                                self.speed_mod += self._speed * bonus_percent
+        
+        # Apply item stat modifiers
+        total_stats_from_items = self.inventory.get_stat_modifiers()
+        for key, value in total_stats_from_items.items():
             if key == 'damage':
                 self.damage = value
             elif key == 'mitigation':
                 self.mitigation = value
             elif key == 'finesse':
                 self.finesse = value
-            # Item stat modifiers are added to existing mods from abilities
+            # Item stat modifiers ADD to existing mods from abilities
             elif key == 'attack': 
-                self.attack_mod = value
+                self.attack_mod += value # Corrected from = to +=
             elif key == 'defense':
-                self.defense_mod = value
+                self.defense_mod += value # Corrected from = to +=
             elif key == 'speed':
-                self.speed_mod = value
+                self.speed_mod += value # Corrected from = to +=
         
 
         self.accounting()
+
+    def can_use_skill(self, skill_id: str) -> tuple[bool, str]:
+        """Checks if the entity can use the specified skill. Returns (can_use, reason_string)."""
+        if skill_id not in self.world_abilities_data:
+            return False, "Skill unknown."
+        if skill_id not in self.abilities: # Check if player actually knows the skill
+            return False, "You do not know this skill."
+
+        skill_def = self.world_abilities_data[skill_id]
+        if skill_def.get("type") != "active_combat":
+            return False, "This is not an active skill."
+
+        cost = skill_def.get("cost", {})
+        if "weave" in cost and self.current_weave < cost["weave"]:
+            return False, f"Not enough weave (requires {cost['weave']}, have {self.current_weave})."
+        # Add other resource checks (stamina, health, items) here if needed
+
+        return True, ""
+
+    def use_skill(self, skill_id: str, target: 'Entity | None', message_log_func: Callable[[str], None]):
+        """Uses a skill on a target. Assumes can_use_skill was checked."""
+        if not message_log_func: message_log_func = lambda x: print(x) # Fallback
+
+        skill_def = self.world_abilities_data[skill_id]
+        skill_name = skill_def.get("name", skill_id)
+        message_log_func(f"{self.name} uses {skill_name}!")
+
+        # Deduct cost
+        cost = skill_def.get("cost", {})
+        if "weave" in cost:
+            self.current_weave -= cost["weave"]
+            message_log_func(f"Used {cost['weave']} weave. ({self.current_weave}/{self.max_weave} remaining)")
+
+        # Apply effects
+        effect = skill_def.get("effect", {})
+        # Effects that apply to a target (which could be self if skill_def["target"] == "self")
+        if target: 
+            if "damage" in effect:
+                damage_info = effect["damage"]
+                base_damage_amount = damage_info.get("amount", 0)
+                # Future: Could scale with player stats, e.g., self.attack * damage_info.get("attack_scaling", 0)
+                # For now, direct damage amount
+                actual_damage = base_damage_amount # Potentially add randomness or scaling later
+                message_log_func(f"{skill_name} hits {target.name} for {actual_damage:.1f} {damage_info.get('type','')} damage.")
+                target.take_damage(actual_damage, message_log_func)
+
+            if "damage_multiplier" in effect: # For skills like "Power Strike"
+                # This assumes the skill enhances a basic attack action that follows,
+                # or it's a direct damage skill where the multiplier applies to some base.
+                # For a direct damage skill:
+                base_attack_damage = self.roll_attack(message_log_func) # Get base physical damage
+                multiplied_damage = self.round_up(base_attack_damage * effect["damage_multiplier"]) # Ensure rounding
+                message_log_func(f"{skill_name} empowers the attack, dealing {multiplied_damage:.1f} damage to {target.name}!")
+                target.take_damage(multiplied_damage, message_log_func)
+
+            # Apply_condition and temporary_stat_bonus can apply to self or enemy based on target
+            if "apply_condition" in effect:
+                condition_info = effect["apply_condition"]
+                target.add_condition(condition_info["name"], 
+                                     condition_info.get("duration", 1), 
+                                     condition_info.get("potency", 1), 
+                                     skill_name, message_log_func)
+
+            if "temporary_stat_bonus" in effect:
+                bonus_info = effect["temporary_stat_bonus"]
+                duration = effect.get("duration_turns", 1) # duration_turns should be at the same level as temporary_stat_bonus
+                for stat_to_buff, amount in bonus_info.items():
+                    target.add_temporary_stat_mod(stat_to_buff, amount, duration, skill_name, message_log_func)
+
+        # Add other effect types: healing, buffs on self, debuffs on enemy, etc.
+        if "heal" in effect:
+            heal_amount = effect["heal"].get("amount", 0)
+            self.current_health = min(self.max_health, self.current_health + heal_amount)
+            message_log_func(f"{self.name} heals for {heal_amount} HP.")
 
     def is_dead(self):
         if self.current_health <= 0:
@@ -307,6 +419,10 @@ class Entity():
             self.reset_health() # Fully heal on level up
             if self.is_player and self.message_log_func:
                  self.message_log_func(f"You have reached level {self.level}!")
+            
+            # Also restore mana on level up
+            self.reset_weave()
+
     def scaling(self):
         if not self.is_player:
             self.attack *= self.level
@@ -336,6 +452,98 @@ class Entity():
             self.update_stats()
         # Inventory.equip_item will handle logging success/failure
 
+    def log_stat_breakdown(self):
+        """Prints a breakdown of the player's stats and their sources to the terminal."""
+        if not self.is_player: # Only log for the player
+            return
+
+        print("\n--- Player Stat Breakdown ---")
+        print(f"  Base Stats: Attack: {self._attack:.1f}, Defense: {self._defense:.1f}, Speed: {self._speed:.1f}")
+
+        # Temporary Stat Mods
+        if self.temporary_stat_mods:
+            print("  Temporary Mods:")
+            for stat, mod_info in self.temporary_stat_mods.items():
+                print(f"    - {stat.capitalize()}: +{mod_info['amount']:.1f} (Duration: {mod_info['duration']} turns)")
+        else:
+            print("  Temporary Mods: None")
+
+        # === Active Abilities ===
+        print("  Active Abilities:")
+        active_abilities_found = False
+        for ability_key in self.abilities:
+            if ability_key in self.world_abilities_data:
+                ability_def = self.world_abilities_data[ability_key]
+                if ability_def.get("type") == "active_combat":
+                    ability_name = ability_def.get("name", ability_key)
+                    print(f"    - {ability_name}")
+                    active_abilities_found = True
+        if not active_abilities_found:
+            print("    - None")
+
+        # === Passive Leveling Abilities ===
+        print("  Passive Leveling Abilities:")
+        passive_leveling_abilities_found = False
+        for ability_key in self.abilities:
+            if ability_key in self.world_abilities_data:
+                ability_def = self.world_abilities_data[ability_key]
+                if ability_def.get("type") == "passive_leveling":
+                    ability_name = ability_def.get("name", ability_key)
+                    print(f"    - {ability_name}")
+                    passive_leveling_abilities_found = True
+        if not passive_leveling_abilities_found:
+            print("    - None")
+
+        # === Other Passive Abilities ===
+        print("  Other Passive Abilities:")
+        other_passive_abilities_found = False
+        for ability_key in self.abilities:
+            if ability_key in self.world_abilities_data:
+                ability_def = self.world_abilities_data[ability_key]
+                ability_name = ability_def.get("name", ability_key)
+                print(f"    - {ability_name}")
+                other_passive_abilities_found = True
+        # Passive Ability Mods
+        passive_ability_mods_found = False # Using same vars for brevity
+        print("  Passive Ability Mods:")
+        for ability_key in self.abilities:
+            if ability_key in self.world_abilities_data:
+                ability_def = self.world_abilities_data[ability_key]
+                ability_name = ability_def.get("name", ability_key)
+                if ability_def.get("type") == "passive" and "effect" in ability_def:
+                    effect = ability_def["effect"]
+                    if "stat_bonus_flat" in effect:
+                        for stat, bonus in effect["stat_bonus_flat"].items(): # No change necessary to print
+                            print(f"    - {ability_name} ({stat.capitalize()}): +{bonus:.1f}")
+                            passive_ability_mods_found = True
+                    if "stat_bonus_percent" in effect: # Example if you add percentage bonuses
+                        for stat, bonus_percent in effect["stat_bonus_percent"].items():
+                            calculated_bonus = 0.0
+                            if stat == "attack": calculated_bonus = self._attack * bonus_percent
+                            elif stat == "defense": calculated_bonus = self._defense * bonus_percent
+                            elif stat == "speed": calculated_bonus = self._speed * bonus_percent
+                            print(f"    - {ability_name} ({stat.capitalize()}): +{bonus_percent*100:.1f}% (adds +{self.round_up(calculated_bonus):.1f})") # Display rounded contribution
+                            passive_ability_mods_found = True
+        if not passive_ability_mods_found:
+            print("    - None")
+
+        # Item Mods
+        item_stats = self.inventory.get_stat_modifiers()
+        print("  Item Mods:")
+        print(f"    - Damage (from items): +{item_stats.get('damage', 0):.1f}")
+        print(f"    - Mitigation (from items): +{item_stats.get('mitigation', 0):.1f}")
+        print(f"    - Finesse (from items): +{item_stats.get('finesse', 0):.1f}")
+        print(f"    - Attack Mod (from items): +{item_stats.get('attack', 0):.1f}")
+        print(f"    - Defense Mod (from items): +{item_stats.get('defense', 0):.1f}")
+        print(f"    - Speed Mod (from items): +{item_stats.get('speed', 0):.1f}")
+
+        # Final Calculated Stats (after update_stats would have run)
+        print("  Final Calculated Stats (including all mods):")
+        print(f"    - Attack: {self.attack:.1f}, Defense: {self.defense:.1f}, Speed: {self.speed:.1f}")
+        print(f"    - Damage: {self.damage:.1f}, Mitigation: {self.mitigation:.1f}, Finesse: {self.finesse:.1f}")
+        print("--- End Stat Breakdown ---\n")
+
+
     def to_dict(self):
         entity_data = {
             "name": self.name,
@@ -347,6 +555,8 @@ class Entity():
             "health_base": self.health_base,
             "max_health": self.max_health,
             "current_health": self.current_health,
+            "max_weave": self.max_weave,
+            "current_weave": self.current_weave,
             "attack_mod": self.attack_mod,
             "defense_mod": self.defense_mod,
             "speed_mod": self.speed_mod,
@@ -371,6 +581,8 @@ class Entity():
         instance._attack = data.get("_attack", 1)
         instance._defense = data.get("_defense", 1)
         instance._speed = data.get("_speed", 1)
+        instance.max_weave = data.get("max_weave", instance.weave_base) # Restore saved max_weave
+        instance.current_weave = data.get("current_weave", instance.max_weave)
         
         instance.attack_mod = data.get("attack_mod", 0)
         instance.defense_mod = data.get("defense_mod", 0)
@@ -381,6 +593,7 @@ class Entity():
         instance.is_player = data.get("is_player", False)
         
         inventory_data = data.get("inventory")
+
         if inventory_data:
             instance.inventory.from_dict(inventory_data, all_items_lookup_map, message_log_func)
 
@@ -395,4 +608,76 @@ class Entity():
         instance.current_health = data.get("current_health", instance.max_health)
         instance.current_health = min(instance.current_health, instance.max_health)
         return instance
-        # Inventory.equip_item will handle logging success/failure
+
+    def add_condition(self, condition_name: str, duration: int, potency: int, source_name: str, message_log_func: Callable[[str], None]):
+        """Adds a condition to the entity."""
+        self.active_conditions[condition_name] = {"duration": duration, "potency": potency, "source": source_name}
+        message_log_func(f"{self.name} is now {condition_name} (Potency: {potency}, Duration: {duration} turns).")
+        self.update_stats() # Recalculate if condition applies immediate stat mods
+
+    def has_condition(self, condition_name: str) -> bool:
+        """Checks if the entity has a specific active condition."""
+        return condition_name in self.active_conditions
+
+    def add_temporary_stat_mod(self, stat_name: str, amount: float, duration: int, source_name: str, message_log_func: Callable[[str], None]):
+        """Adds a temporary modifier to a specific stat."""
+        # For simplicity, new applications overwrite old ones for the same stat.
+        # Could be enhanced to stack or refresh duration.
+        self.temporary_stat_mods[stat_name] = {"amount": amount, "duration": duration, "source": source_name}
+        if amount >= 0:
+            message_log_func(f"{self.name} gains a temporary bonus to {stat_name} (+{amount:.1f}) from {source_name} for {duration} turns.")
+        else:
+            message_log_func(f"{self.name} suffers a temporary penalty to {stat_name} ({amount:.1f}) from {source_name} for {duration} turns.")
+        self.update_stats() # Recalculate stats immediately
+
+    def has_ability(self, ability_id: str) -> bool:
+        """Checks if the entity has a specific ability."""
+        return ability_id in self.abilities
+
+    def process_conditions_at_turn_start(self, message_log_func: Callable[[str], None]):
+        """Applies effects of conditions at the start of the entity's turn (e.g., DoTs)."""
+        if not message_log_func: message_log_func = lambda x: print(x)
+        
+        conditions_to_remove = []
+        for name, data in list(self.active_conditions.items()): # Iterate over a copy for safe modification
+            if name == "burning":
+                damage = data.get("potency", 1) # Damage based on potency
+                message_log_func(f"{self.name} takes {damage} damage from burning.")
+                self.take_damage(damage, message_log_func, combat=False) # combat=False to bypass mitigation for DoT
+                if self.is_dead():
+                    message_log_func(f"{self.name} succumbs to the flames.")
+                    # Combat end will be handled by World
+            # Add other conditions like "poisoned" here
+
+    def process_conditions_at_turn_end(self, message_log_func: Callable[[str], None]):
+        """Decrements duration of active conditions. Removes expired ones."""
+        if not message_log_func: message_log_func = lambda x: print(x)
+
+        expired_conditions = []
+        for name, data in self.active_conditions.items():
+            data["duration"] -= 1
+            if data["duration"] <= 0:
+                expired_conditions.append(name)
+            else:
+                message_log_func(f"{name} on {self.name} has {data['duration']} turns remaining.")
+
+
+        for name in expired_conditions:
+            del self.active_conditions[name]
+            message_log_func(f"{name} has worn off from {self.name}.")
+        
+        # Also process temporary stat mods
+        expired_temp_mods = []
+        for stat, mod_info in self.temporary_stat_mods.items():
+            mod_info["duration"] -=1
+            if mod_info["duration"] <= 0:
+                expired_temp_mods.append(stat)
+        
+        removed_mod = False
+        for stat in expired_temp_mods:
+            del self.temporary_stat_mods[stat]
+            message_log_func(f"Temporary bonus to {stat} on {self.name} has worn off.")
+            removed_mod = True
+
+        if expired_conditions or removed_mod:
+            self.update_stats() # Recalculate stats if any condition/mod expired

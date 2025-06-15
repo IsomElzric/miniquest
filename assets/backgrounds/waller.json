@@ -10,7 +10,8 @@
     "abilities": ["defensive_actions", "mending_form", "stalwart_stance"],
     "stat_gains_per_level": { "attack": 1, "defense": 3, "speed": 1, "health_per_level_bonus": 7 },
     "ability_unlocks_at_level": [
-        { "level": 2, "ability": "mending_form" },
-        { "level": 3, "ability": "stalwart_stance" }
+        { "level": 1, "ability": "defensive_actions" },
+        { "level": 1, "ability": "mending_form" },
+        { "level": 1, "ability": "stalwart_stance" }
     ]
 }
