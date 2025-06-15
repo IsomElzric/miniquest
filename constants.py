@@ -42,6 +42,8 @@ GAME_VIEW_RIGHT_PANEL_BACKGROUND_IMAGE = os.path.join(UI_ART_PATH, "background_p
 MENU_BUTTON_IMAGE_PATH = os.path.join(UI_ART_PATH, "menu_button.png")
 CC_LEFT_PANEL_BUTTON_AREA_BG_IMAGE = os.path.join(UI_ART_PATH, "cc_left_panel_button_area_bg.png") # New
 CHARACTER_ART_PATH = os.path.join(ART_BASE_PATH, "character_backgrounds") # New
+INPUT_BOX_BACKGROUND_IMAGE_PATH = os.path.join(UI_ART_PATH, "input_box_background.png") # New for input box
+INPUT_BOX_BACKGROUND_PADDING = 25 # Pixels to add to each side of the input box for its background sprite
 DEFAULT_CHARACTER_ART_IMAGE = os.path.join(CHARACTER_ART_PATH, "default_char_art.png") # New default art
 
 # --- UI Element Constants ---
