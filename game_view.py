@@ -308,7 +308,28 @@ class GameView(arcade.View):
             self.scroll_offset_y = 0.0
             if self.selected_inventory_item:
                 details_text = f"--- {self.selected_inventory_item.name} ---\n"
-                details_text += f"Type: {self.selected_inventory_item.type}\n\n"
+                details_text += f"Type: {self.selected_inventory_item.type}\n" # Keep newline here
+
+                # NEW: Add stats display for weapon/armor
+                if self.selected_inventory_item.type in ['weapon', 'armor']:
+                    details_text += "\n" # Add a blank line before stats
+                    details_text += "Current Stats:\n"
+                    # Weapons primarily show damage, but can have other stats
+                    if self.selected_inventory_item.type == 'weapon':
+                        details_text += f"  Damage: {self.selected_inventory_item.damage:.1f}\n"
+                        if self.selected_inventory_item.mitigation != 0: # Only show if not zero
+                            details_text += f"  Mitigation: {self.selected_inventory_item.mitigation:.1f}\n"
+                        if self.selected_inventory_item.finesse != 0: # Only show if not zero
+                            details_text += f"  Finesse: {self.selected_inventory_item.finesse:.1f}\n"
+                    # Armor primarily shows mitigation, but can have other stats
+                    elif self.selected_inventory_item.type == 'armor':
+                        details_text += f"  Mitigation: {self.selected_inventory_item.mitigation:.1f}\n"
+                        if self.selected_inventory_item.damage != 0: # Only show if not zero
+                            details_text += f"  Damage: {self.selected_inventory_item.damage:.1f}\n"
+                        if self.selected_inventory_item.finesse != 0: # Only show if not zero
+                            details_text += f"  Finesse: {self.selected_inventory_item.finesse:.1f}\n"
+                    details_text += "\n" # Add a blank line after stats, before description/wealth
+
                 if self.selected_inventory_item.type == "wealth":
                     appraised_value_text = self.selected_inventory_item.appraise_worth()
                     details_text += f"Appraised Value: {appraised_value_text.capitalize()}\n\n"
