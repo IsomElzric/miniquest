@@ -50,20 +50,20 @@ class Combat():
     def execute_player_attack(self, attacker, defender): # Renamed from player_turn
         # Message "It's your turn!" is now handled by World class
         damage = attacker.roll_attack(self.message_log) # NEW: Pass message_log to roll_attack
-        self.message_log(f'{attacker.name} deals {damage} damage!') # Use attacker.name for consistency
+        self.message_log(f'{attacker.name} deals {damage:.1f} damage!') # Use attacker.name for consistency
         
         defender.take_damage(damage, self.message_log) # NEW: Pass message_log to take_damage
-        self.message_log(f'{defender.name} has {defender.current_health} health.') # Changed from .append
+        self.message_log(f'{defender.name} has {defender.current_health:.1f} health.') # Changed from .append
         self.message_log('') # Add spacing
         # Death check and loot generation will be handled by the World class after this method returns.
 
     def execute_enemy_attack(self, attacker, defender): # Renamed from enemy_turn
         # Message about enemy attacking is now handled by World class
         damage = attacker.roll_attack(self.message_log) # NEW: Pass message_log to roll_attack
-        self.message_log(f'{attacker.name} deals {damage} damage to you!') # Changed from .append
+        self.message_log(f'{attacker.name} deals {damage:.1f} damage to you!') # Changed from .append
 
         defender.take_damage(damage, self.message_log) # NEW: Pass message_log to take_damage
-        self.message_log(f'You have {defender.current_health} health left.') # Changed from .append
+        self.message_log(f'You have {defender.current_health:.1f} health left.') # Changed from .append
         self.message_log('') # Add spacing
         # Death check for player will be handled by the World class.
 

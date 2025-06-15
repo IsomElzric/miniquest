@@ -185,6 +185,9 @@ class Builder():
                             if relative_dirpath and relative_dirpath != '.': # Ensure it's a subfolder
                                 icon_subfolder = os.path.basename(relative_dirpath) # Get the last part of the path (subfolder name)
                             worth = 0
+                            # Initialize stat_line to ensure it's bound, even if the file is too short
+                            # for the i == 1 block to be reached.
+                            stat_line = ""
                             for i, line in enumerate(file):
                                 if i == 0:
                                     item_type = line.strip()
@@ -214,13 +217,17 @@ class Builder():
                             item.icon_filename = icon_filename # Set the icon filename
                             item.icon_subfolder = icon_subfolder # Set the icon subfolder
                             
-                            if item_type == 'wealth':
+                            if item_type == 'wealth': # Handle wealth items
                                 item.worth = worth
-                            else:
+                            elif item_type == 'crafting': # Handle crafting items
+                                # Crafting effects should come from the already parsed stat_modifiers
+                                # (which would be {} if stat_line was empty or invalid)
+                                item.crafting_effects = stat_modifiers
+                                # item.stat_modifiers will be set to default (zeros) by Item class for 'crafting' type
+                            else: # Handle weapon, armor, trinket
                                 item.stat_modifiers = stat_modifiers
                             
                             item_list.append(item)
-                        
                     except Exception as e:
                         self.message_log(f"Error reading item file {filepath}: {e}") # Changed from .append
                         print(f"Error reading item file {filepath}: {e}\n")

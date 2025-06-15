@@ -68,6 +68,7 @@ MENU_PADDING_BELOW_TITLE = 15
 TEXT_AREA_LINE_HEIGHT = 22
 TEXT_AREA_FONT_SIZE = 12
 LOG_AREA_FONT_SIZE = 12
+LOG_AREA_TEXT_BOX_HEIGHT = 150 # Set default height for Log messages in crafting
 
 # Item Icon Display Constants
 ITEM_ICON_DRAW_SIZE = (32, 32)

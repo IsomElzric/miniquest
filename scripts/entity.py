@@ -125,8 +125,8 @@ class Entity():
         attack_modifier_low = self.round_up(attack / 2) + self.damage
         
         # Convert bounds to integers for randint
-        low_bound = int(attack_modifier_low)
-        high_bound = int(attack_modifier_high)
+        low_bound = int(self.round_up(attack_modifier_low))
+        high_bound = int(self.round_up(attack_modifier_high))
 
         # Ensure high_bound is not less than low_bound after integer conversion
         if high_bound < low_bound:
@@ -134,6 +134,7 @@ class Entity():
                                    # or if low=0.9 (int 0) and high=0.2 (int 0)
 
         base_roll_damage = r.randint(low_bound, high_bound)
+        base_roll_damage = max(1, base_roll_damage)
         
         total_damage = self.roll_crit(base_roll_damage, message_log) 
         return total_damage

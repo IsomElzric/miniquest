@@ -79,6 +79,11 @@ class World():
         self.available_skills_for_selection = []
         self.selected_skill_id_for_targeting = None
 
+        # Crafting state (Type hint allows dict or None)
+        self.selected_crafting_base_item_info: dict | None = None # {'item': item_obj, 'source': 'carried'/'strongbox'}
+        self.selected_crafting_material_info: dict | None = None # {'item': item_obj, 'source': 'carried'/'strongbox'}
+        self.last_action_exhaustion_result: str | None = None # To store exhaustion status from actions like combat
+
 
     def append_message(self, message):
         self.message_log.append(message)
@@ -103,7 +108,7 @@ class World():
         self.player.world_abilities_data = self.abilities_data # Give player access to all ability definitions
 
         self.append_message(f"You have created a new character: {self.player.name}!")
-        self.append_message(f"Current Stats: Lvl {self.player.level}, HP {self.player.current_health}/{self.player.max_health}, Atk {self.player.attack}, Def {self.player.defense}, Spd {self.player.speed}")
+        self.append_message(f"Current Stats: Lvl {self.player.level}, Health {self.player.current_health:.1f}/{self.player.max_health:.1f}, Atk {self.player.attack:.1f}, Def {self.player.defense:.1f}, Spd {self.player.speed:.1f}")
         # Log initial abilities
         self.append_message(f"Initial Abilities: {', '.join(sorted(list(self.player.abilities))) if self.player.abilities else 'None'}")
         # print(f"DEBUG: Player created. Player name: {self.player.name}")
@@ -196,6 +201,7 @@ class World():
         logging.debug(f"Handling player choice: '{choice_text}'")
 
         if self.is_player_combat_turn: # Check if we are expecting a combat command
+            self.last_action_exhaustion_result = None # Clear any prior exhaustion result before a new combat action
             if choice_text == "Attack":
                 return self._player_attack_action()
             elif choice_text == "Flee":
@@ -243,6 +249,7 @@ class World():
         # Defeat is now handled by transitioning to "show_defeat_log_at_camp"
         # and then "Continue" to "area_description".
         
+        next_state_after_loot_decision = None
         if self.in_loot_decision_mode:
             # Construct expected choice texts based on the pending item
             expected_take_choice = f"Take {self.pending_loot_item.name}" if self.pending_loot_item else ""
@@ -256,13 +263,13 @@ class World():
                     self.loot.add_item_to_inventory(self.player, self.pending_loot_item, self.append_message) 
                 self._end_loot_decision_phase()
                 self.display_current_area() # Refresh area description
-                return "area_description"
+                next_state_after_loot_decision = "area_description"
             elif choice_text == expected_leave_choice:
                 self.append_message(f"You decide to leave the {self.pending_loot_item.name if self.pending_loot_item else 'item'}.")
                 self.append_message('')
                 self._end_loot_decision_phase()
                 self.display_current_area() # Refresh area description
-                return "area_description"
+                next_state_after_loot_decision = "area_description"
             elif choice_text == "Drop Item to Take": # New command from loot_decision_menu
                 if self.pending_loot_item:
                     self.append_message(f"You consider dropping an item to make space for the {self.pending_loot_item.name}.")
@@ -271,13 +278,13 @@ class World():
                 else: # Should ideally not happen if the button was visible
                     self.append_message("Error: No pending loot item to make space for.")
                     self._end_loot_decision_phase() # End if something is wrong
-                    return "area_description" # Go back to area if error
+                    next_state_after_loot_decision = "area_description" # Go back to area if error
             elif choice_text.startswith("DropForLoot: "): # Player has clicked an item to drop
                 if not self.pending_loot_item:
                     self.append_message("Error: No pending loot item to make space for.")
                     self._end_loot_decision_phase() # Ensure phase ends if error
                     self.display_current_area()
-                    return "area_description"
+                    next_state_after_loot_decision = "area_description"
 
                 item_name_to_drop = choice_text.split(": ", 1)[1]
                 item_to_drop_obj = None
@@ -294,21 +301,29 @@ class World():
                     if drop_success:
                         # If drop successful, now try to add the pending loot item
                         add_success = self.loot.add_item_to_inventory(self.player, self.pending_loot_item, self.append_message)
-                        print(f"DEBUG World: add_item_to_inventory for '{self.pending_loot_item.name}' success: {add_success}") # DEBUG
+                        print(f"DEBUG World: add_item_to_inventory for '{self.pending_loot_item.name if self.pending_loot_item else 'None'}' success: {add_success}") # DEBUG
                 else:
                     self.append_message(f"Could not find {item_name_to_drop} in your carried items to drop.")
                 
                 self._end_loot_decision_phase() # End loot decision regardless of outcome
                 self.display_current_area() # Refresh area description
-                return "area_description" # Return to main area view
+                next_state_after_loot_decision = "area_description" # Return to main area view
             else:
                 # Fallback if the choice_text doesn't match expected commands for loot decision
                 self.append_message(f"Invalid choice during loot decision: {choice_text}")
                 return "show_loot_options" # Stay in loot decision mode
-        # The standalone 'elif choice_text.startswith("DropForLoot: ")' block is no longer needed here,
-        # as its logic has been moved into the 'if self.in_loot_decision_mode:' block.
+            
+            # If a loot decision was made that completes the loot phase:
+            if next_state_after_loot_decision:
+                # Check for exhaustion from the preceding combat
+                if self.last_action_exhaustion_result == "exhausted":
+                    self.last_action_exhaustion_result = None # Clear the flag
+                    return self.rest() # Player collapses and rests
+                
+                self.last_action_exhaustion_result = None # Clear if not exhausted
+                return next_state_after_loot_decision # Proceed to the determined next state
 
-
+        # --- Handle non-loot and non-combat-turn choices ---
         if self.in_travel_selection_mode:
             return self.handle_travel_choice(choice_text)
 
@@ -490,20 +505,25 @@ class World():
         else:
             self.append_message("Error: Enemy reference missing during defeat handling.")
         self.append_message(f"You have defeated {enemy_name}!")
-
+        
         dropped_item = None
         if self.active_combat_instance and self.current_combat_enemy:
             dropped_item = self.active_combat_instance.generate_loot(self.player, self.current_combat_enemy)
         elif not self.active_combat_instance:
             self.append_message("Error: Combat instance missing, cannot generate loot.")
-        time_passage_result = self.increment_time(1)
+
+        # Store exhaustion status from combat. This will be checked AFTER loot decision.
+        self.last_action_exhaustion_result = self.increment_time(1) 
         self._end_combat_sequence()
 
         if dropped_item:
             self.pending_loot_item = dropped_item
             self.in_loot_decision_mode = True
             return "show_loot_options"
-        if time_passage_result == "exhausted":
+        
+        # If no loot dropped, check exhaustion immediately
+        if self.last_action_exhaustion_result == "exhausted":
+            self.last_action_exhaustion_result = None # Clear it as we're acting on it
             return self.rest()
         
         return "area_description"
@@ -615,6 +635,11 @@ class World():
         self.available_skills_for_selection.clear()
         self.selected_skill_id_for_targeting = None
 
+    def _clear_crafting_selection(self):
+        """Clears any selected items for crafting."""
+        self.selected_crafting_base_item_info = None
+        self.selected_crafting_material_info = None
+
     def player_defeated_retreat(self):
         """Handles the state changes and messages when the player is defeated and flees."""
         self.append_message("You had to flee back to safety.")
@@ -668,6 +693,115 @@ class World():
         # self.player.print_entity(self.append_message) # Player stats are in the banner
         # The GUI will now handle displaying inventory options.
 
+    def preview_craft_effects(self, base_item_info, material_item_info):
+        """
+        Previews the effects of crafting without applying them.
+        Returns a dictionary with original_stats, preview_stats, and stat_changes.
+        Returns None if crafting is not possible or no effects.
+        """
+        if not base_item_info or not material_item_info:
+            # self.append_message("Error: Missing base item or material for preview.") # Don't log in preview
+            return None
+
+        base_item = base_item_info['item']
+        material_item = material_item_info['item']
+
+        if base_item.type not in ['weapon', 'armor']:
+            # self.append_message(f"Cannot preview craft: {base_item.name} is not a weapon or armor.")
+            return None
+        if material_item.type != 'crafting':
+            # self.append_message(f"Cannot preview craft: {material_item.name} is not a crafting material.")
+            return None
+
+        original_stats = base_item.stat_modifiers.copy() # Get a copy of current modifiers
+        preview_stats = base_item.stat_modifiers.copy() # Start preview with current modifiers
+        stat_changes = {}
+        effects_previewed = False
+
+        # Crafting effects are directly in material_item.crafting_effects
+        if isinstance(material_item.crafting_effects, dict) and material_item.crafting_effects:
+            for stat_key, val_change in material_item.crafting_effects.items():
+                if not isinstance(val_change, (int, float)):
+                    # self.append_message(f"Skipping non-numeric crafting effect for '{stat_key}'.") # Don't log in preview
+                    continue # Skip non-numeric effects like potential prefixes/suffixes
+
+                current_val_in_preview = preview_stats.get(stat_key, 0)
+                preview_stats[stat_key] = current_val_in_preview + val_change
+                stat_changes[stat_key] = val_change # Store the change amount
+                effects_previewed = True
+        
+        if not effects_previewed:
+            # self.append_message("No relevant effects to preview for this combination.") # Don't log in preview
+            return None # No relevant effects to preview
+
+        return {
+            "original_stats": original_stats,
+            "preview_stats": preview_stats,
+            "stat_changes": stat_changes
+        }
+
+    def perform_craft(self, base_item_info, material_item_info):
+        """
+        Performs the crafting action. Modifies base_item using material_item.
+        Consumes the material_item.
+        Returns True if successful, False otherwise.
+        """
+        if not base_item_info or not material_item_info:
+            self.append_message("Error: Missing base item or material for crafting.")
+            return False
+        
+        base_item = base_item_info['item']
+        material_item = material_item_info['item']
+
+        if base_item.type not in ['weapon', 'armor']:
+            self.append_message(f"Error: Cannot modify {base_item.name} ({base_item.type}). Only weapons and armor can be base items.")
+            return False
+        if material_item.type != 'crafting':
+            self.append_message(f"Error: {material_item.name} is not a valid crafting material.")
+            return False
+
+        self.append_message(f"Crafting {base_item.name} with {material_item.name}...")
+
+        effects_applied = False
+        # original_name = base_item.name # Keep if you plan to re-add name changes later
+
+        # Apply stat changes from material_item.crafting_effects
+        # The crafting_effects dictionary itself contains the stat modifiers.
+        if isinstance(material_item.crafting_effects, dict) and material_item.crafting_effects:
+            if not isinstance(base_item.stat_modifiers, dict): # Ensure base_item.stat_modifiers is a dict
+                base_item.stat_modifiers = {}
+
+            for stat_key, val_change in material_item.crafting_effects.items():
+                # Ensure val_change is a number, skip if not (e.g. if a prefix/suffix key was accidentally included)
+                if not isinstance(val_change, (int, float)):
+                    self.append_message(f"  Skipping non-numeric crafting effect for '{stat_key}'.")
+                    continue
+
+                current_val = base_item.stat_modifiers.get(stat_key, 0)
+                base_item.stat_modifiers[stat_key] = current_val + val_change # Additive change
+                self.append_message(f"  '{stat_key.capitalize()}' on {base_item.name} base effect changed by {val_change:+.1f}.")
+                effects_applied = True
+            
+            if effects_applied:
+                # Re-assign to trigger Item's setter, which updates self.damage, self.mitigation, etc.
+                base_item.stat_modifiers = base_item.stat_modifiers
+        # Name modification logic (prefix/suffix) is removed for now.
+
+        if not effects_applied:
+            self.append_message("  The material had no discernible effect on the item.")
+
+        # Consume the material
+        material_source_list = self.player.inventory.strongbox_items if material_item_info['source'] == 'strongbox' else self.player.inventory.stored_items
+        if material_item in material_source_list:
+            material_source_list.remove(material_item)
+            self.append_message(f"  Used up {material_item.name}.")
+        else:
+            self.append_message(f"  Error: Could not find {material_item.name} in {material_item_info['source']} to consume.")
+
+        self.player.update_stats() # Update player stats if base item was equipped or its stats changed
+        self.append_message("Crafting complete.")
+        return True
+
     def to_dict(self):
         world_data = {
             "player": self.player.to_dict(),
@@ -679,6 +813,7 @@ class World():
             # Combat-specific states like active_combat_instance are not saved.
             # area_list, enemy_list, all_items, grimoire_entries are rebuilt by Builder on load.
         }
+        # Crafting selections are transient and not saved.
         return world_data
 
     def save_game(self):
@@ -735,6 +870,7 @@ class World():
         # Reset transient states
         world.in_travel_selection_mode = False
         world.active_combat_instance = None
+        world._clear_crafting_selection() # Ensure cleared on load
         # ... other transient states ...
         
         if temp_message_log_func: temp_message_log_func("World.from_dict: Game data processed.")

@@ -13,6 +13,7 @@ class Item(ABC):
         self.icon_filename: str | None = None # New attribute for the icon's filename, explicitly typed
         self.icon_subfolder: str | None = None # New attribute for the icon's subfolder (e.g., "generic", "aethelwood")
         
+        self.crafting_effects = {} # e.g., {"stat_modifiers": {"damage": 2}, "prefix": "Sharpened"}
         self._stat_modifiers = {}
         self.damage = 0
         self.mitigation = 0
@@ -62,16 +63,30 @@ class Item(ABC):
     @stat_modifiers.setter
     def stat_modifiers(self, value):
         self._stat_modifiers = value
-        if 'attack' in value:
-            # print('Setting stats for trinket')
-            self.attack = value['attack']
-            self.defense = value['defense']
-            self.speed = value['speed']
-        else:
-            # print('Setting stats for non-trinket')
-            self.damage = value['damage']
-            self.mitigation = value['mitigation']
-            self.finesse = value['finesse']
+        # For Trinkets, directly set attack/defense/speed attributes
+        if self.type == 'trinket':
+            self.attack = value.get('attack', 0)
+            self.defense = value.get('defense', 0)
+            self.speed = value.get('speed', 0)
+            # Trinkets typically don't have damage/mitigation/finesse from their primary stat_modifiers
+            self.damage = 0
+            self.mitigation = 0
+            self.finesse = 0
+        # For Weapons/Armor, set damage/mitigation/finesse attributes
+        elif self.type in ['weapon', 'armor']:
+            self.damage = value.get('damage', 0)
+            self.mitigation = value.get('mitigation', 0)
+            self.finesse = value.get('finesse', 0)
+            # Weapons/Armor typically don't grant direct attack/defense/speed from their primary stat_modifiers
+            self.attack = 0
+            self.defense = 0
+            self.speed = 0
+        # For Crafting items, their own stats are usually 0, effects are in crafting_effects
+        elif self.type == 'crafting':
+            self.damage, self.mitigation, self.finesse, self.attack, self.defense, self.speed = 0,0,0,0,0,0
+        # Wealth items also have 0 for these combat stats
+        elif self.type == 'wealth':
+            self.damage, self.mitigation, self.finesse, self.attack, self.defense, self.speed = 0,0,0,0,0,0
 
     def display(self):
         print('{} ({})'.format(self.name, self.type))
