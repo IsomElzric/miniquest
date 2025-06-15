@@ -7,7 +7,7 @@ import arcade.color # Explicitly import arcade.color
 
 # Import constants and other views/modules
 from constants import (BACKGROUND_IMAGE, TOP_BANNER_BACKGROUND_IMAGE, MENU_BUTTON_IMAGE_PATH,
-                       MENU_VIEW_RIGHT_PANEL_BACKGROUND_IMAGE, SCREEN_HEIGHT, PLAYER_INFO_BANNER_HEIGHT,
+                       MENU_VIEW_RIGHT_PANEL_BACKGROUND_IMAGE, ASSETS_DIR, SCREEN_HEIGHT, PLAYER_INFO_BANNER_HEIGHT,
                        GAME_AREA_WIDTH, RIGHT_MENU_X_START, MENU_PANEL_WIDTH, TOP_PADDING,
                        MENU_BUTTON_HEIGHT, MENU_BUTTON_VERTICAL_SPACING, MENU_BUTTON_TARGET_WIDTH, # Keep existing
                        MENU_BUTTON_TEXT_COLOR, MENU_BUTTON_TEXT_PADDING, SCREEN_WIDTH, # Keep existing
@@ -16,6 +16,7 @@ from constants import (BACKGROUND_IMAGE, TOP_BANNER_BACKGROUND_IMAGE, MENU_BUTTO
                       )
 from character_creation_view import CharacterCreationView
 from grimoire_view import GrimoireView
+import os # For scanning save files directory
 from game_view import GameView
 from scripts.world import World
 
@@ -58,31 +59,45 @@ class MenuView(arcade.View):
             print(f"Warning: MenuView right panel background image '{MENU_VIEW_RIGHT_PANEL_BACKGROUND_IMAGE}' not found.")
 
         self.menu_buttons = arcade.SpriteList()
+        self.menu_state = "main" # "main" or "load_game_selection"
+        self.available_save_files = [] # To store tuples of (display_name, filename.json)
         self._create_menu_buttons()
 
     def _create_menu_buttons(self):
         """Creates the New Game, Load Game, and Quit buttons."""
         self.menu_buttons.clear()
-        button_texts = ["New Game", "Load Game", "Grimoire", "Quit"] # Added Grimoire
+        button_properties = [] # List of dicts: {'text': "Display Text", 'action': "action_command"}
+
+        if self.menu_state == "main":
+            button_properties = [
+                {'text': "New Game", 'action': "new_game"},
+                {'text': "Load Game", 'action': "show_load_options"},
+                {'text': "Grimoire", 'action': "grimoire"},
+                {'text': "Quit", 'action': "quit"}
+            ]
+        elif self.menu_state == "load_game_selection":
+            for display_name, filename in self.available_save_files:
+                button_properties.append({'text': display_name, 'action': f"load_selected_{filename}"})
+            button_properties.append({'text': "Back", 'action': "back_to_main_menu"})
         
         menu_content_area_top_y = SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT
         title_area_height = MENU_ACTIONS_TITLE_FONT_SIZE + MENU_PADDING_BELOW_TITLE # Approx height for a title if we had one
         
         # Start buttons lower in the MenuView, perhaps centered vertically in the panel
         available_button_height = SCREEN_HEIGHT - PLAYER_INFO_BANNER_HEIGHT - (2 * TOP_PADDING) # Total height for buttons
-        total_buttons_height = len(button_texts) * MENU_BUTTON_HEIGHT + (len(button_texts) -1) * MENU_BUTTON_VERTICAL_SPACING
+        total_buttons_height = len(button_properties) * MENU_BUTTON_HEIGHT + (len(button_properties) -1) * MENU_BUTTON_VERTICAL_SPACING
         first_button_center_y = menu_content_area_top_y - TOP_PADDING - (available_button_height - total_buttons_height) / 2 - MENU_BUTTON_HEIGHT / 2
 
         button_center_x = RIGHT_MENU_X_START + MENU_PANEL_WIDTH / 2
 
-        for i, text in enumerate(button_texts):
+        for i, prop in enumerate(button_properties):
             button_sprite = arcade.Sprite(texture=self.menu_button_texture) if self.menu_button_texture else arcade.SpriteSolidColor(MENU_BUTTON_TARGET_WIDTH, MENU_BUTTON_HEIGHT, arcade.color.DARK_SLATE_BLUE)
             button_sprite.width = MENU_BUTTON_TARGET_WIDTH
             button_sprite.height = MENU_BUTTON_HEIGHT
             button_sprite.center_x = button_center_x
             button_sprite.center_y = first_button_center_y - i * (MENU_BUTTON_HEIGHT + MENU_BUTTON_VERTICAL_SPACING)
-            button_sprite.properties['text'] = text
-            button_sprite.properties['action'] = text.lower().replace(" ", "_") # e.g., "new_game"
+            button_sprite.properties['text'] = prop['text']
+            button_sprite.properties['action'] = prop['action']
             self.menu_buttons.append(button_sprite)
 
     def on_show_view(self):
@@ -191,15 +206,30 @@ class MenuView(arcade.View):
                 print("--- New Game button pressed! ---")
                 cc_view = CharacterCreationView(self)
                 self.window.show_view(cc_view)
-            elif action == "load_game":
-                print("--- Load Game button pressed! ---")
-                loaded_world = World.load_game()
-                if loaded_world:
-                    game_view = GameView(loaded_world)
-                    
+            elif action == "show_load_options":
+                print("--- Load Game (show options) button pressed! ---")
+                self._scan_for_save_files()
+                if not self.available_save_files:
+                    print("No save files found.")
+                    # Optionally, you could add a temporary message to the screen here
+                    # or just rely on the console print for now.
+                    # To keep it simple, we'll just refresh the main menu.
+                    self.menu_state = "main" 
+                else:
+                    self.menu_state = "load_game_selection"
+                self._create_menu_buttons() # Rebuild buttons based on new state
+            
+            # Check if action is a string before calling string methods
+            elif isinstance(action, str) and action.startswith("load_selected_"):
+                filename_to_load = action.replace("load_selected_", "") # Now safe
+                print(f"--- Attempting to load save file: {filename_to_load} ---")
+                loaded_world = World.load_game(filename_to_load) # Pass the specific filename
+                if loaded_world: # If load_game returns a World instance
+                    game_view = GameView(loaded_world) # Create GameView with the loaded world
+
                     # Prime GameView with loaded world's state
                     game_view.log_messages_to_display.clear() 
-                    # Ensure the world's current area description is in the log for initial display
+
                     loaded_world.display_current_area() # This appends to world's log
                     game_view.log_messages_to_display.extend(loaded_world.get_messages()) 
                     
@@ -210,13 +240,16 @@ class MenuView(arcade.View):
 
                     self.window.show_view(game_view)
                 else:
-                    print("Failed to load game or no save file found.")
-                    # Optionally, display a message to the user on the MenuView itself.
-                    # For now, we'll just print to console.
-                    # To show a message on screen, you might add a temporary text element to MenuView
-                    # or switch to a simple "message view".
-                    # Example: self.show_load_error_message()
-                    pass # Stay on MenuView
+                    print(f"Failed to load game: {filename_to_load}")
+                    # Potentially show an error message to the user on screen
+                    # For now, just return to the load game selection or main menu
+                    self.menu_state = "load_game_selection" # Or "main"
+                    self._create_menu_buttons()
+
+            elif action == "back_to_main_menu":
+                self.menu_state = "main"
+                self.available_save_files.clear()
+                self._create_menu_buttons()
 
             elif action == "grimoire":
                 print("--- Grimoire button pressed! (Main Menu) ---")
@@ -231,6 +264,21 @@ class MenuView(arcade.View):
             elif action == "quit":
                 print("--- Quit button pressed! Exiting game. ---")
                 arcade.exit()
+
+    def _scan_for_save_files(self):
+        """Scans the save directory for .json files and populates available_save_files."""
+        self.available_save_files.clear()
+        save_dir = os.path.join(ASSETS_DIR, 'save_files') # Use ASSETS_DIR from constants
+        if not os.path.exists(save_dir):
+            print(f"Save directory not found: {save_dir}")
+            return
+
+        for filename in os.listdir(save_dir):
+            if filename.endswith(".json"):
+                # Display name is filename without .json, spaces for underscores, capitalized
+                display_name = os.path.splitext(filename)[0].replace("_", " ").capitalize()
+                self.available_save_files.append((display_name, filename))
+        self.available_save_files.sort() # Sort by display name
 
     def on_mouse_motion(self, x: float, y: float, dx: float, dy: float):
         # Optional: Add hover effect for the new sprite buttons if desired

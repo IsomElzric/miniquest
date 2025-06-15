@@ -22,7 +22,7 @@ import logging
 class World():
     def __init__(self) -> None:
         self.SAVE_GAME_DIR = os.path.join(BUILDER_ASSETS_DIR, 'save_files')
-        self.SAVE_GAME_FILENAME = "savegame.json"
+        # self.SAVE_GAME_FILENAME = "savegame.json" # Filename will now be dynamic
 
         print("--- World.__init__ called! ---") # TRACE 1: See if World is initialized multiple times
         # --- CRITICAL FIX: Initialize message_log FIRST ---
@@ -816,17 +816,29 @@ class World():
         # Crafting selections are transient and not saved.
         return world_data
 
+    def _sanitize_filename(self, name: str) -> str:
+        """Sanitizes a string to be used as a valid filename."""
+        name = name.lower()
+        name = name.replace(" ", "_")
+        # Remove characters not allowed in filenames on most OS
+        invalid_chars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*']
+        for char in invalid_chars:
+            name = name.replace(char, '')
+        return name if name else "default_char" # Ensure there's always a name
+
     def save_game(self):
         self.append_message("Saving game...")
         print("Attempting to save game...") 
         try:
+            player_name_sanitized = self._sanitize_filename(self.player.name)
+            dynamic_save_filename = f"{player_name_sanitized}.json"
+
             if not os.path.exists(self.SAVE_GAME_DIR):
                 os.makedirs(self.SAVE_GAME_DIR)
                 print(f"Created save directory: {self.SAVE_GAME_DIR}")
 
-            save_path = os.path.join(self.SAVE_GAME_DIR, self.SAVE_GAME_FILENAME)
+            save_path = os.path.join(self.SAVE_GAME_DIR, dynamic_save_filename)
             world_data = self.to_dict()
-
             with open(save_path, 'w') as f:
                 json.dump(world_data, f, indent=4)
             
@@ -877,11 +889,10 @@ class World():
         return world
 
     @classmethod
-    def load_game(cls):
+    def load_game(cls, character_filename: str): # Now accepts a specific filename
         save_game_dir = os.path.join(BUILDER_ASSETS_DIR, 'save_files')
-        save_game_filename = "savegame.json"
-        save_path = os.path.join(save_game_dir, save_game_filename)
-
+        save_path = os.path.join(save_game_dir, character_filename)
+        
         print(f"Attempting to load game from {save_path}...")
         if not os.path.exists(save_path):
             print("No save file found.")
