@@ -145,14 +145,24 @@ class Entity():
 
         # Reduce speed's impact on crit chance, finesse has more impact.
         crit_modifier = self.round_up((speed / 4) + (self.finesse / 2))
-        crit_chance = 10
+        base_crit_chance = 10 # Base critical hit chance percentage
+        
+        current_crit_chance = base_crit_chance
+        # Check for heightened_crit condition
+        if self.has_condition("heightened_crit"):
+            condition_data = self.active_conditions.get("heightened_crit")
+            if condition_data:
+                crit_bonus_from_condition = condition_data.get("potency", 0)
+                current_crit_chance += crit_bonus_from_condition
+                if self.is_player and self.message_log_func: # Log if player and logger exists
+                    self.message_log_func(f"{self.name} benefits from Heightened Crit (+{crit_bonus_from_condition}% crit chance)!")
+
         # Crit damage bonus now based on attacker's attack and finesse, not raw speed.
         # And base crit damage multiplier reduced.
         crit_damage_bonus_value = self.round_up((self.attack / 4) + (self.finesse / 2))
 
         roll = r.randrange(1, 101, 1) - crit_modifier
-
-        if roll <= crit_chance:
+        if roll <= current_crit_chance:
             # Crits now do 1.5x base damage + the new crit_damage_bonus_value
             total_damage = self.round_up(damage * 1.5) + crit_damage_bonus_value
 
@@ -164,18 +174,42 @@ class Entity():
             # message_log('') # Add spacing
             return damage
         
-    def take_damage(self, damage, message_log, combat=True): 
-        defense = self.defense # + self.defense_mod
+    def take_damage(self, damage_value: float, message_log: Callable[[str], None], combat: bool = True, attacker: 'Entity | None' = None): # Added type hint for attacker
+        """
+        Reduces entity's health by damage_value, considering defense and mitigation if in combat.
+        If an attacker is provided and has an ability like 'killer_tomato',
+        it ensures a minimum amount of damage is dealt after mitigation.
+        """
+        actual_damage_taken = 0.0
+    
         if combat:
-            total_damage = damage - self.round_up((defense / 2) + self.mitigation)
-            
-            if total_damage < 0:
-                total_damage = 0
-            
-            message_log(f'{self.name} takes {total_damage} damage.') # Simplified message
-            
-            # message_log('') # Add spacing
-            self.current_health -= total_damage
+            # Calculate damage after defense and mitigation
+            mitigated_damage = damage_value - self.round_up((self.defense / 2) + self.mitigation)
+            if mitigated_damage < 0:
+                mitigated_damage = 0.0
+            # print(f"DEBUG take_damage: {self.name} - initial damage_value: {damage_value}, mitigated_damage (before min_dmg_ability): {mitigated_damage}") # DEBUG
+
+            actual_damage_taken = mitigated_damage
+    
+            # Apply attacker's "killer_tomato" (minimum_damage) ability if present
+            if attacker and attacker.has_ability("killer_tomato"):
+                # Ensure world_abilities_data is accessible and populated on the attacker
+                if hasattr(attacker, 'world_abilities_data') and attacker.world_abilities_data:
+                    ability_def = attacker.world_abilities_data.get("killer_tomato")
+                    if ability_def: # Check if ability_def is not None
+                        effect = ability_def.get("effect", {})
+                        min_dmg_from_ability = effect.get("minimum_damage")
+                        if min_dmg_from_ability is not None:
+                            # If the initial pre-mitigation damage was positive
+                            if damage_value > 0:
+                                actual_damage_taken = max(float(min_dmg_from_ability), actual_damage_taken)
+                                
+        else: # Non-combat damage (e.g., DoT from conditions) - bypasses mitigation and killer_tomato
+            actual_damage_taken = damage_value
+            if actual_damage_taken < 0: actual_damage_taken = 0.0 # Should not happen for DoTs
+    
+        message_log(f'{self.name} takes {actual_damage_taken:.1f} damage.')
+        self.current_health -= actual_damage_taken
 
     # MODIFIED: Only changed this method to use message_log
     def print_entity(self, message_log): 
@@ -183,7 +217,7 @@ class Entity():
         defense = self.defense + self.defense_mod
         speed = self.speed + self.speed_mod
 
-        message_log(f'{self.name} level {self.level}: Health {self.current_health}/{self.max_health}, Attack {self._attack:.1f} ({self.attack:.1f}), Defense {self._defense:.1f} ({self.defense:.1f}), Speed {self._speed:.1f} ({self.speed:.1f})')
+        message_log(f'{self.name} level {self.level}: Health {self.current_health:.1f}/{self.max_health:.1f}, Attack {self._attack:.1f} ({self.attack:.1f}), Defense {self._defense:.1f} ({self.defense:.1f}), Speed {self._speed:.1f} ({self.speed:.1f})')
         if self.inventory.equipped_items['Held'] is not None:
             message_log(f'You are currently wielding a {self.inventory.equipped_items["Held"].name} as your weapon.')
         if self.inventory.equipped_items['Body'] is not None:
@@ -309,9 +343,9 @@ class Entity():
                 base_damage_amount = damage_info.get("amount", 0)
                 # Future: Could scale with player stats, e.g., self.attack * damage_info.get("attack_scaling", 0)
                 # For now, direct damage amount
-                actual_damage = base_damage_amount # Potentially add randomness or scaling later
-                message_log_func(f"{skill_name} hits {target.name} for {actual_damage:.1f} {damage_info.get('type','')} damage.")
-                target.take_damage(actual_damage, message_log_func)
+                damage_to_deal = float(base_damage_amount) # Potentially add randomness or scaling later
+                # message_log_func(f"{skill_name} hits {target.name} for {damage_to_deal:.1f} {damage_info.get('type','')} damage.") # Message now in take_damage
+                target.take_damage(damage_to_deal, message_log_func, attacker=self) # Pass self as attacker
 
             if "damage_multiplier" in effect: # For skills like "Power Strike"
                 # This assumes the skill enhances a basic attack action that follows,
@@ -319,8 +353,8 @@ class Entity():
                 # For a direct damage skill:
                 base_attack_damage = self.roll_attack(message_log_func) # Get base physical damage
                 multiplied_damage = self.round_up(base_attack_damage * effect["damage_multiplier"]) # Ensure rounding
-                message_log_func(f"{skill_name} empowers the attack, dealing {multiplied_damage:.1f} damage to {target.name}!")
-                target.take_damage(multiplied_damage, message_log_func)
+                # message_log_func(f"{skill_name} empowers the attack, dealing {multiplied_damage:.1f} damage to {target.name}!") # Message now in take_damage
+                target.take_damage(multiplied_damage, message_log_func, attacker=self) # Pass self as attacker
 
             # Apply_condition and temporary_stat_bonus can apply to self or enemy based on target
             if "apply_condition" in effect:
@@ -643,7 +677,7 @@ class Entity():
             if name == "burning":
                 damage = data.get("potency", 1) # Damage based on potency
                 message_log_func(f"{self.name} takes {damage} damage from burning.")
-                self.take_damage(damage, message_log_func, combat=False) # combat=False to bypass mitigation for DoT
+                self.take_damage(float(damage), message_log_func, combat=False, attacker=None) # DoTs don't have an "attacker" for min_damage
                 if self.is_dead():
                     message_log_func(f"{self.name} succumbs to the flames.")
                     # Combat end will be handled by World

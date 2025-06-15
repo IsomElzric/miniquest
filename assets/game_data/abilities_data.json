@@ -47,8 +47,8 @@
         "description": "Capitalizes on enemy vulnerabilities for increased effectiveness.",
         "cost": { "weave": 7 },
         "effect": {
-            "apply_condition": { "name": "heightened_crit", "duration": 1, "potency": 15 },
-            "notes": "Example: Applies a condition granting +15% critical hit chance for the next attack/turn."
+            "apply_condition": { "name": "heightened_crit", "duration": 1, "potency": 100 },
+            "notes": "Example: Applies a condition granting +100% critical hit chance for the next attack/turn."
         }
     },
     "first_strike": {
@@ -125,6 +125,15 @@
             "temporary_stat_bonus": {"attack": 5, "speed": 10},
             "duration_turns": 1,
             "notes": "Example: +5 Attack, +10 Speed for 1 turn."
+        }
+    },
+    "killer_tomato": {
+        "type": "passive",
+        "name": "Killer Tomato",
+        "description": "A series of fast, and weak attacks to get around low damage.",
+        "effect": {
+            "minimum_damage": 1,
+            "notes": "Example: A minimum of 1 damage."
         }
     }
 }

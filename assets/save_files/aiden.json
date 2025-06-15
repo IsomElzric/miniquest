@@ -1,0 +1,106 @@
+{
+    "player": {
+        "name": "Aiden",
+        "level": 4,
+        "target": 160,
+        "_attack": 6,
+        "_defense": 14,
+        "_speed": 4,
+        "health_base": 20,
+        "max_health": 29.0,
+        "current_health": 30.5,
+        "max_weave": 50,
+        "current_weave": 32,
+        "attack_mod": 5.0,
+        "defense_mod": 4.0,
+        "speed_mod": 4.0,
+        "_damage": 3.5,
+        "_mitigation": 2.5,
+        "_finesse": 1.5,
+        "is_player": true,
+        "inventory": {
+            "stored_items_names": [],
+            "equipped_items_names": {
+                "Held": "Sulphur-etched blade",
+                "Body": null,
+                "Trinkets": [
+                    "Survivor's tooth",
+                    "Sorrow-worn bead",
+                    "Gritstone fragment",
+                    "Forgotten cog",
+                    "Worn lucky charm",
+                    "Whisperwood charm",
+                    "Mire-singer pebble",
+                    "Heart-ember"
+                ]
+            },
+            "owned_items_names": [
+                "Polished bone shards",
+                "Grinding stone",
+                "Broken blade",
+                "Scrap relic",
+                "Worn hatchet",
+                "Butcher's cleaver",
+                "Sorrow-worn bead",
+                "Intact timepiece",
+                "Survivor's tooth",
+                "Pre-cataclysmic glass shards",
+                "Roughwood",
+                "Hardened resin nodules",
+                "Forgotten cog",
+                "Gritstone fragment",
+                "Worn lucky charm",
+                "Barbed harpoon",
+                "High priest's scepter",
+                "Whisperwood charm",
+                "Petrified bloom",
+                "Shifting moss cluster",
+                "Rusted shiv",
+                "Mire-singer pebble",
+                "Ash-runner's pike",
+                "Sulphur bloom",
+                "Sulphur-etched blade",
+                "Heart-ember",
+                "Scrap metal"
+            ],
+            "income": 126,
+            "strongbox_items_names": [
+                "Scrap metal",
+                "Scrap relic"
+            ]
+        },
+        "abilities": [
+            "defensive_actions",
+            "mending_form",
+            "stalwart_stance"
+        ],
+        "background_stat_gains": {
+            "attack": 1,
+            "defense": 3,
+            "speed": 1,
+            "health_per_level_bonus": 7
+        },
+        "background_ability_unlocks": [
+            {
+                "level": 2,
+                "ability": "mending_form"
+            },
+            {
+                "level": 3,
+                "ability": "stalwart_stance"
+            }
+        ]
+    },
+    "current_area_name": "Last anvil",
+    "camp": "Last anvil",
+    "day_cycle": {
+        "hour": 0,
+        "max_hours_before_exhaustion": 12,
+        "night_starts_at_hour": 8,
+        "_night_announced": false,
+        "_dusk_announced": false
+    },
+    "message_log": [
+        "Saving game..."
+    ]
+}

@@ -1,0 +1,120 @@
+{
+    "player": {
+        "name": "Sadie",
+        "level": 3,
+        "target": 80,
+        "_attack": 3.0,
+        "_defense": 5.0,
+        "_speed": 11.0,
+        "health_base": 15,
+        "max_health": 18.5,
+        "current_health": 18.5,
+        "max_weave": 50,
+        "current_weave": 50,
+        "attack_mod": 3.0,
+        "defense_mod": 2.0,
+        "speed_mod": 2.0,
+        "_damage": 4.5,
+        "_mitigation": 2.0,
+        "_finesse": 4.0,
+        "is_player": true,
+        "inventory": {
+            "stored_items_names": [
+                "Scrap relic",
+                "Worn hatchet",
+                "Intact timepiece"
+            ],
+            "equipped_items_names": {
+                "Held": "Butcher's cleaver",
+                "Body": null,
+                "Trinkets": [
+                    "Survivor's tooth",
+                    "Carrion-talon",
+                    "Sorrow-worn bead",
+                    "Gritstone fragment",
+                    "Worn lucky charm"
+                ]
+            },
+            "owned_items_names": [
+                "Worn hatchet",
+                "Survivor's tooth",
+                "Carrion-talon",
+                "Worn hatchet",
+                "Splintered club",
+                "Scrap relic",
+                "Sealed preserves jar",
+                "Roughwood",
+                "Pre-cataclysmic glass shards",
+                "Rusted shiv",
+                "Hardened resin nodules",
+                "Scrap relic",
+                "Tattered hide",
+                "Polished bone shards",
+                "Scrap relic",
+                "Sorrow-worn bead",
+                "Pre-cataclysmic glass shards",
+                "Grinding stone",
+                "Gritstone fragment",
+                "Tattered hide",
+                "Hardened resin nodules",
+                "Roughwood",
+                "Hardened resin nodules",
+                "Scrap relic",
+                "Polished bone shards",
+                "Scrap metal",
+                "Grinding stone",
+                "Worn lucky charm",
+                "Polished bone shards",
+                "Hardened resin nodules",
+                "Butcher's cleaver",
+                "Hardened resin nodules",
+                "Sealed preserves jar",
+                "Grinding stone",
+                "Sealed preserves jar",
+                "Tattered hide",
+                "Scrap relic",
+                "Worn hatchet",
+                "Intact timepiece"
+            ],
+            "income": 51,
+            "strongbox_items_names": []
+        },
+        "abilities": [
+            "killer_tomato",
+            "exploit_weakness",
+            "first_strike"
+        ],
+        "background_stat_gains": {
+            "attack": 1,
+            "defense": 1,
+            "speed": 3,
+            "health_per_level_bonus": 3
+        },
+        "background_ability_unlocks": [
+            {
+                "level": 1,
+                "ability": "killer_tomato"
+            },
+            {
+                "level": 1,
+                "ability": "exploit_weakness"
+            },
+            {
+                "level": 1,
+                "ability": "first_strike"
+            }
+        ]
+    },
+    "current_area_name": "Shadowed residential blocks",
+    "camp": "Broken hearth",
+    "day_cycle": {
+        "hour": 6,
+        "max_hours_before_exhaustion": 12,
+        "night_starts_at_hour": 8,
+        "_night_announced": false,
+        "_dusk_announced": false
+    },
+    "message_log": [
+        "Saving game..."
+    ]
+}

@@ -52,7 +52,7 @@ class Combat():
         damage = attacker.roll_attack(self.message_log) # NEW: Pass message_log to roll_attack
         self.message_log(f'{attacker.name} deals {damage:.1f} damage!') # Use attacker.name for consistency
         
-        defender.take_damage(damage, self.message_log) # NEW: Pass message_log to take_damage
+        defender.take_damage(damage, self.message_log, attacker=attacker) # NEW: Pass message_log to take_damage
         self.message_log(f'{defender.name} has {defender.current_health:.1f} health.') # Changed from .append
         self.message_log('') # Add spacing
         # Death check and loot generation will be handled by the World class after this method returns.
@@ -62,7 +62,7 @@ class Combat():
         damage = attacker.roll_attack(self.message_log) # NEW: Pass message_log to roll_attack
         self.message_log(f'{attacker.name} deals {damage:.1f} damage to you!') # Changed from .append
 
-        defender.take_damage(damage, self.message_log) # NEW: Pass message_log to take_damage
+        defender.take_damage(damage, self.message_log, attacker=attacker) # NEW: Pass message_log to take_damage
         self.message_log(f'You have {defender.current_health:.1f} health left.') # Changed from .append
         self.message_log('') # Add spacing
         # Death check for player will be handled by the World class.
