@@ -142,21 +142,20 @@ class Entity():
         r = Random()
         speed = self.speed # + self.speed_mod
 
-        crit_modifier = self.round_up((speed / 2) + self.finesse)
+        # Reduce speed's impact on crit chance, finesse has more impact.
+        crit_modifier = self.round_up((speed / 4) + (self.finesse / 2))
         crit_chance = 10
-        crit_damage_bonus = speed
+        # Crit damage bonus now based on attacker's attack and finesse, not raw speed.
+        # And base crit damage multiplier reduced.
+        crit_damage_bonus_value = self.round_up((self.attack / 4) + (self.finesse / 2))
 
         roll = r.randrange(1, 101, 1) - crit_modifier
 
-        # Removed detailed crit roll messages for brevity
-        # message_log(f'{self.name} needs a {crit_chance} or less to crit...')
-        # message_log(f'{self.name} rolled a {roll} to crit with a modifier of {crit_modifier}...')
-        
         if roll <= crit_chance:
-            total_damage = (damage * 2) + self.round_up(crit_damage_bonus)
+            # Crits now do 1.5x base damage + the new crit_damage_bonus_value
+            total_damage = self.round_up(damage * 1.5) + crit_damage_bonus_value
 
             message_log(f'{self.name} lands a mortal wound!')
-            # message_log('') # Add spacing
             
             return total_damage
         else:
