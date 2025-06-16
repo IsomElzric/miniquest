@@ -7,10 +7,10 @@
         "speed": 5
     },
     "details": "Starting Stats:\n  Attack: 4\n  Defense: 2\n  Speed: 5\n\nA Pest-culler strikes with precise, unexpected force, finding crucial weaknesses and exploiting them.",
-    "abilities": ["killer_tomato", "exploit_weakness", "first_strike"],
+    "abilities": ["intuitive_culling", "exploit_weakness", "first_strike"],
     "stat_gains_per_level": { "attack": 1, "defense": 1, "speed": 3, "health_per_level_bonus": 3 },
     "ability_unlocks_at_level": [
-        { "level": 1, "ability": "killer_tomato" },
+        { "level": 1, "ability": "intuitive_culling" },
         { "level": 1, "ability": "exploit_weakness" },
         { "level": 1, "ability": "first_strike" }
     ]

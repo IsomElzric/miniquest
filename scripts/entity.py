@@ -177,7 +177,7 @@ class Entity():
     def take_damage(self, damage_value: float, message_log: Callable[[str], None], combat: bool = True, attacker: 'Entity | None' = None): # Added type hint for attacker
         """
         Reduces entity's health by damage_value, considering defense and mitigation if in combat.
-        If an attacker is provided and has an ability like 'killer_tomato',
+        If an attacker is provided and has an ability like 'intuitive_culling',
         it ensures a minimum amount of damage is dealt after mitigation.
         """
         actual_damage_taken = 0.0
@@ -191,11 +191,11 @@ class Entity():
 
             actual_damage_taken = mitigated_damage
     
-            # Apply attacker's "killer_tomato" (minimum_damage) ability if present
-            if attacker and attacker.has_ability("killer_tomato"):
+            # Apply attacker's "intuitive_culling" (minimum_damage) ability if present
+            if attacker and attacker.has_ability("intuitive_culling"):
                 # Ensure world_abilities_data is accessible and populated on the attacker
                 if hasattr(attacker, 'world_abilities_data') and attacker.world_abilities_data:
-                    ability_def = attacker.world_abilities_data.get("killer_tomato")
+                    ability_def = attacker.world_abilities_data.get("intuitive_culling")
                     if ability_def: # Check if ability_def is not None
                         effect = ability_def.get("effect", {})
                         min_dmg_from_ability = effect.get("minimum_damage")
@@ -204,7 +204,7 @@ class Entity():
                             if damage_value > 0:
                                 actual_damage_taken = max(float(min_dmg_from_ability), actual_damage_taken)
                                 
-        else: # Non-combat damage (e.g., DoT from conditions) - bypasses mitigation and killer_tomato
+        else: # Non-combat damage (e.g., DoT from conditions) - bypasses mitigation and intuitive_culling
             actual_damage_taken = damage_value
             if actual_damage_taken < 0: actual_damage_taken = 0.0 # Should not happen for DoTs
     

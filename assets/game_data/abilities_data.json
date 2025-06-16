@@ -127,9 +127,9 @@
             "notes": "Example: +5 Attack, +10 Speed for 1 turn."
         }
     },
-    "killer_tomato": {
+    "intuitive_culling": {
         "type": "passive",
-        "name": "Killer Tomato",
+        "name": "Intuitive Culling",
         "description": "A series of fast, and weak attacks to get around low damage.",
         "effect": {
             "minimum_damage": 1,
